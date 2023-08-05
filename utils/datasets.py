@@ -72,7 +72,7 @@ class OpenPackAll(torch.utils.data.Dataset):
         self.load_dataset(
             cfg,
             user_session_list,
-            window,
+            window_imu,
             submission=submission)
 
         self.preprocessing()
@@ -114,7 +114,9 @@ class OpenPackAll(torch.utils.data.Dataset):
                     cfg.dataset.stream.path.fname,
                 )
             ts_sess_keypoints, x_sess_keypoints = optk.data.load_keypoints(path_keypoints)
-            x_sess_keypoints = x_sess_keypoints[:(x_sess_keypoints.shape[0] - 1)]  # Remove prediction score.   
+            x_sess_keypoints = x_sess_keypoints[:(x_sess_keypoints.shape[0] - 1)]  # Remove prediction score.
+            print("Shape of x keypoints:", x_sess_keypoints.shape)
+            print("Shape of t keypoints:", ts_sess_keypoints.shape)           
 
             paths_imu = []
             for device in cfg.dataset.stream.devices:
@@ -131,11 +133,22 @@ class OpenPackAll(torch.utils.data.Dataset):
                 paths_imu,
                 use_acc=cfg.dataset.stream.acc,
                 use_gyro=cfg.dataset.stream.gyro,
-                use_quat=cfg.dataset.stream.quat)   
+                use_quat=cfg.dataset.stream.quat)
+
+            print("Shape of x imu:", x_sess_imu.shape)
+            print("Shape of t imu:", ts_sess_imu.shape)   
 
             imu_pd = self.create_pd_from_data(x_sess_imu, ts_sess_imu)
             keypoints_pd = self.create_pd_from_data(x_sess_keypoints, ts_sess_keypoints)
             merged_pd = self.merge_pds(imu_pd, keypoints_pd)
+
+            assert merged_pd[0] == ts_sess_imu.shape[0], "DataFrame and array are not of the same length"
+
+            merged_pd = merged_pd.drop("unixtime", axis=1)
+            x_total = merged_pd.values()
+
+            print("Shape of the merged array:", x_total.shape)
+
 
             if submission:
                 # For set dummy data.
@@ -147,19 +160,17 @@ class OpenPackAll(torch.utils.data.Dataset):
                 )
                 df_label_imu = optk.data.load_and_resample_operation_labels(
                     path, ts_sess_imu, classes=self.classes)
-                df_label_keypoints = optk.data.load_and_resample_operation_labels(
-                    path, ts_sess_keypoints, classes=self.classes)
-                label = df_label["act_idx"].values
+                label = df_label_imu["act_idx"].values
 
             data.append({
                 "user": user,
                 "session": session,
-                "data": x_sess,
+                "data": x_total,
                 "label": label,
-                "unixtime": ts_sess,
+                "unixtime": ts_sess_imu,
             })
 
-            seq_len = ts_sess.shape[0]
+            seq_len = ts_sess_imu.shape[0]
             index += [dict(seq=seq_idx, seg=seg_idx, pos=pos)
                       for seg_idx, pos in enumerate(range(0, seq_len, window))]
         self.data = data
