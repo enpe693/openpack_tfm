@@ -77,13 +77,13 @@ class OpenPackAll(torch.utils.data.Dataset):
 
         self.preprocessing()
 
-    def create_pd_from_data(data_array, time_array):
+    def create_pd_from_data(self,data_array, time_array):
         values_df = pd.DataFrame(np.reshape(data_array, (len(data_array), -1)))
         time_df = pd.DataFrame({'unixtime': time_array}, index=values_df.index)
         df = pd.concat([values_df, time_df], axis=1)
         return df
     
-    def merge_pds(df1, df2):
+    def merge_pds(self,df1, df2):
         merged_df = pd.merge_asof(df1, df2, on='unixtime')
         merged_df = merged_df.interpolate()
         merged_df = merged_df.ffill().bfill()
@@ -116,7 +116,11 @@ class OpenPackAll(torch.utils.data.Dataset):
             ts_sess_keypoints, x_sess_keypoints = optk.data.load_keypoints(path_keypoints)
             x_sess_keypoints = x_sess_keypoints[:(x_sess_keypoints.shape[0] - 1)]  # Remove prediction score.
             print("Shape of x keypoints:", x_sess_keypoints.shape)
-            print("Shape of t keypoints:", ts_sess_keypoints.shape)           
+            print("Shape of t keypoints:", ts_sess_keypoints.shape)
+            
+            x_sess_keypoints = x_sess_keypoints.transpose(2, 0, 1).reshape(34, 27377).transpose(1,0)
+
+            print("Shape of x keypoints:", x_sess_keypoints.shape)
 
             paths_imu = []
             for device in cfg.dataset.stream.devices:
@@ -134,18 +138,41 @@ class OpenPackAll(torch.utils.data.Dataset):
                 use_acc=cfg.dataset.stream.acc,
                 use_gyro=cfg.dataset.stream.gyro,
                 use_quat=cfg.dataset.stream.quat)
+            
+            x_sess_imu = x_sess_imu.transpose(1,0)
 
             print("Shape of x imu:", x_sess_imu.shape)
-            print("Shape of t imu:", ts_sess_imu.shape)   
+            print("Shape of t imu:", ts_sess_imu.shape)
+
+            print("First t imu entries", ts_sess_imu)   
+            print("First t keypoints entries", ts_sess_keypoints)   
+
 
             imu_pd = self.create_pd_from_data(x_sess_imu, ts_sess_imu)
             keypoints_pd = self.create_pd_from_data(x_sess_keypoints, ts_sess_keypoints)
             merged_pd = self.merge_pds(imu_pd, keypoints_pd)
+            print(merged_pd.shape)
+            print(merged_pd.head())
 
-            assert merged_pd[0] == ts_sess_imu.shape[0], "DataFrame and array are not of the same length"
+            assert merged_pd.shape[0] == ts_sess_imu.shape[0], "DataFrame and array are not of the same length"
 
             merged_pd = merged_pd.drop("unixtime", axis=1)
-            x_total = merged_pd.values()
+            path = Path(
+                    cfg.dataset.annotation.path.dir,
+                    cfg.dataset.annotation.path.fname
+                )
+
+            df_label_imu = optk.data.load_and_resample_operation_labels(
+                    path, ts_sess_imu, classes=self.classes)
+            
+            df_label_keypoints = optk.data.load_and_resample_operation_labels(
+                    path, ts_sess_keypoints, classes=self.classes)
+            
+            print("IMU time", df_label_imu["annot_time"])
+            print("Keypoints time", df_label_keypoints["annot_time"])
+
+            x_total = merged_pd.values
+            
 
             print("Shape of the merged array:", x_total.shape)
 
