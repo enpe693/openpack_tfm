@@ -14,7 +14,7 @@ import pytorch_lightning as pl
 import torch
 from torch import nn
 from scipy.special import softmax
-from models import DeepConvLstmV3
+from model.models import DeepConvLstmV3
 import matplotlib.pyplot as plt
 import seaborn as sns
 from hydra import initialize_config_dir, compose
