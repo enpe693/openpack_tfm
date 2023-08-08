@@ -37,3 +37,4 @@ cfg = OmegaConf.create({
 
 print(OmegaConf.to_yaml(cfg))
 print(OmegaConf.to_yaml(optk.OPENPACK_OPERATIONS))
+print(torch.cuda.is_available())

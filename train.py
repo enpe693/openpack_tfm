@@ -162,7 +162,7 @@ def test(cfg: DictConfig, mode: str = "test"):
 
 
 @ hydra.main(version_base=None, config_path="./configs",
-             config_name="deep-conv-lstm.yaml")
+             config_name="config.yaml")
 def main(cfg: DictConfig):
     # DEBUG
     if cfg.debug:
@@ -180,6 +180,6 @@ def main(cfg: DictConfig):
     else:
         raise ValueError(f"unknown mode [cfg.mode={cfg.mode}]")
     
-    
+
 if __name__ == "__main__":
     main()
