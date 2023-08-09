@@ -150,7 +150,7 @@ class DeepConvLSTMSelfAttn(nn.Module):
         return x
     
 class DeepConvLstmV3(nn.Module):
-    def __init__(self, in_ch: int = 3, num_classes: int = None):
+    def __init__(self, in_ch: int = 46, num_classes: int = None):
         super().__init__()
         if num_classes is None:
             num_classes = len(OPENPACK_OPERATIONS)

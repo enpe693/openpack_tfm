@@ -103,8 +103,10 @@ class OpenPackAll(torch.utils.data.Dataset):
             window (int, optional): _description_. Defaults to None.
             submission (bool, optional): _description_. Defaults to False.
         """
+        print("load dataset")
         data, index = [], []
         for seq_idx, (user, session) in enumerate(user_session_list):
+            print(f"user {user}, session {session}")
             with open_dict(cfg):
                 cfg.user = {"name": user}
                 cfg.session = session
@@ -115,12 +117,12 @@ class OpenPackAll(torch.utils.data.Dataset):
                 )
             ts_sess_keypoints, x_sess_keypoints = optk.data.load_keypoints(path_keypoints)
             x_sess_keypoints = x_sess_keypoints[:(x_sess_keypoints.shape[0] - 1)]  # Remove prediction score.
-            print("Shape of x keypoints:", x_sess_keypoints.shape)
-            print("Shape of t keypoints:", ts_sess_keypoints.shape)
+            #print("Shape of x keypoints:", x_sess_keypoints.shape)
+            #print("Shape of t keypoints:", ts_sess_keypoints.shape)
             
-            x_sess_keypoints = x_sess_keypoints.transpose(2, 0, 1).reshape(34, 27377).transpose(1,0)
+            x_sess_keypoints = x_sess_keypoints.transpose(2, 0, 1).reshape(34, -1).transpose(1,0)
 
-            print("Shape of x keypoints:", x_sess_keypoints.shape)
+            #print("Shape of x keypoints:", x_sess_keypoints.shape)
 
             paths_imu = []
             for device in cfg.dataset.stream.devices:
@@ -141,18 +143,18 @@ class OpenPackAll(torch.utils.data.Dataset):
             
             x_sess_imu = x_sess_imu.transpose(1,0)
 
-            print("Shape of x imu:", x_sess_imu.shape)
-            print("Shape of t imu:", ts_sess_imu.shape)
+            #print("Shape of x imu:", x_sess_imu.shape)
+            #print("Shape of t imu:", ts_sess_imu.shape)
 
-            print("First t imu entries", ts_sess_imu)   
-            print("First t keypoints entries", ts_sess_keypoints)   
+            #print("First t imu entries", ts_sess_imu)   
+            #print("First t keypoints entries", ts_sess_keypoints)   
 
 
             imu_pd = self.create_pd_from_data(x_sess_imu, ts_sess_imu)
             keypoints_pd = self.create_pd_from_data(x_sess_keypoints, ts_sess_keypoints)
             merged_pd = self.merge_pds(imu_pd, keypoints_pd)
             print(merged_pd.shape)
-            print(merged_pd.head())
+            #print(merged_pd.head())
 
             assert merged_pd.shape[0] == ts_sess_imu.shape[0], "DataFrame and array are not of the same length"
 
@@ -165,16 +167,15 @@ class OpenPackAll(torch.utils.data.Dataset):
             df_label_imu = optk.data.load_and_resample_operation_labels(
                     path, ts_sess_imu, classes=self.classes)
             
-            df_label_keypoints = optk.data.load_and_resample_operation_labels(
-                    path, ts_sess_keypoints, classes=self.classes)
+            #df_label_keypoints = optk.data.load_and_resample_operation_labels(path, ts_sess_keypoints, classes=self.classes)
             
-            print("IMU time", df_label_imu["annot_time"])
-            print("Keypoints time", df_label_keypoints["annot_time"])
+            #print("IMU time", df_label_imu["annot_time"])
+            #print("Keypoints time", df_label_keypoints["annot_time"])
 
-            x_total = merged_pd.values
+            x_total = merged_pd.values.transpose(1,0)
             
 
-            print("Shape of the merged array:", x_total.shape)
+            #print("Shape of the merged array:", x_total.shape)
 
 
             if submission:
@@ -202,6 +203,8 @@ class OpenPackAll(torch.utils.data.Dataset):
                       for seg_idx, pos in enumerate(range(0, seq_len, window))]
         self.data = data
         self.index = tuple(index)
+        print("index:" )
+        print(index)
 
     
     def load_dataset_keypoints(
@@ -287,7 +290,9 @@ class OpenPackAll(torch.utils.data.Dataset):
 
         head = seg_idx * self.window
         tail = (seg_idx + 1) * self.window
+        print(f'Index:{index}, seq_idx: {seq_idx}, seg_idx: {seg_idx}, seq_len {seq_len}, head: {head}, tail: {tail}')
         if tail >= seq_len:
+            print("inside")
             pad_tail = tail - seq_len
             tail = seq_len
         else:
