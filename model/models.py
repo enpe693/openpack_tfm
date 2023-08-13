@@ -86,13 +86,15 @@ class DeepConvLSTMSelfAttn(nn.Module):
 
     def __init__(
         self,
-        in_ch: int = 6,
+        in_ch: int = 46,
         num_classes: int = None,
         cnn_filters=3,
         lstm_units=32,
-        num_attn_heads: int = 1,
+        num_attn_heads: int = 2,
     ):
         super().__init__()
+        if num_classes is None:
+            num_classes = len(OPENPACK_OPERATIONS)
 
         # NOTE: The first block is input layer.
 

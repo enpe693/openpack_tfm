@@ -153,7 +153,7 @@ class OpenPackAll(torch.utils.data.Dataset):
             imu_pd = self.create_pd_from_data(x_sess_imu, ts_sess_imu)
             keypoints_pd = self.create_pd_from_data(x_sess_keypoints, ts_sess_keypoints)
             merged_pd = self.merge_pds(imu_pd, keypoints_pd)
-            print(merged_pd.shape)
+            #print(merged_pd.shape)
             #print(merged_pd.head())
 
             assert merged_pd.shape[0] == ts_sess_imu.shape[0], "DataFrame and array are not of the same length"
@@ -203,8 +203,8 @@ class OpenPackAll(torch.utils.data.Dataset):
                       for seg_idx, pos in enumerate(range(0, seq_len, window))]
         self.data = data
         self.index = tuple(index)
-        print("index:" )
-        print(index)
+        #print("index:" )
+        #print(index)
 
     
     def load_dataset_keypoints(
@@ -290,9 +290,9 @@ class OpenPackAll(torch.utils.data.Dataset):
 
         head = seg_idx * self.window
         tail = (seg_idx + 1) * self.window
-        print(f'Index:{index}, seq_idx: {seq_idx}, seg_idx: {seg_idx}, seq_len {seq_len}, head: {head}, tail: {tail}')
+        #print(f'Index:{index}, seq_idx: {seq_idx}, seg_idx: {seg_idx}, seq_len {seq_len}, head: {head}, tail: {tail}')
         if tail >= seq_len:
-            print("inside")
+            #print("inside")
             pad_tail = tail - seq_len
             tail = seq_len
         else:

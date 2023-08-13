@@ -14,7 +14,7 @@ import pytorch_lightning as pl
 import torch
 from torch import nn
 from scipy.special import softmax
-from model.models import DeepConvLstmV3
+from model.models import DeepConvLstmV3, DeepConvLSTMSelfAttn
 import matplotlib.pyplot as plt
 import seaborn as sns
 from hydra import initialize_config_dir, compose
@@ -34,7 +34,8 @@ class MyModelLM(optorch.lightning.BaseLightningModule):
         # NOTE: Please select the model you want to use!
         #model = DeepConvLstmV1()
         # model = DeepConvLstm()
-        model = DeepConvLstmV3()
+        #model = DeepConvLstmV3()
+        model = DeepConvLSTMSelfAttn()
         return model
     
     
