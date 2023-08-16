@@ -19,6 +19,8 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from hydra import initialize_config_dir, compose
 from omegaconf import DictConfig, OmegaConf
+from torchinfo import summary
+
 
 from openpack_toolkit import OPENPACK_OPERATIONS
 
@@ -35,7 +37,9 @@ class MyModelLM(optorch.lightning.BaseLightningModule):
         #model = DeepConvLstmV1()
         # model = DeepConvLstm()
         #model = DeepConvLstmV3()
+        
         model = DeepConvLSTMSelfAttn()
+        summary(model, input_size=(32, 46, 1800, 1))
         return model
     
     
@@ -52,9 +56,15 @@ class MyModelLM(optorch.lightning.BaseLightningModule):
     def training_step(self, batch: Dict, batch_idx: int) -> Dict:
         """Definition of training loop. Get mini-batch and return loss.
         """
-        x = batch["x"].to(device=self.device, dtype=torch.float)
+        x = batch["x"].to(device=self.device, dtype=torch.float)        
         t = batch["t"].to(device=self.device, dtype=torch.long)
         y_hat = self(x).squeeze(3)
+
+        #print("Input tensor size:", x.shape)
+        #print("Output tensor size:", y_hat.shape)
+        #print("Size of tensor after layer 1:", self.conv.weight.shape)
+        #print("Size of tensor after layer 2:", self.lstm.weight.shape)
+        #print("Size of tensor after layer 3:", self.attention.weight.shape)
 
         loss = self.criterion(y_hat, t)
         acc = self.calc_accuracy(y_hat, t)
