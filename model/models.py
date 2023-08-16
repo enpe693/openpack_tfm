@@ -222,3 +222,132 @@ class DeepConvLstmV3(nn.Module):
         # -- [3] Output --
         x = self.out8(x)
         return x
+    
+
+class ModalityFusionModel(nn.Module):
+    def __init__(self, in_ch: int = 46, num_classes: int = None):
+        super().__init__()
+        if num_classes is None:
+            num_classes = len(OPENPACK_OPERATIONS)
+
+        # -- [1] CNN --
+        # *** Edit Here ***
+        num_conv_layers = 4 # convolutional layers (Default: 4)
+        num_conv_filter = 64 # convolutional filters (Default: 64)
+        ks = 5 # kernel size, 
+        # ******************
+        
+        blocks = []
+        for i in range(num_conv_layers):
+            in_ch_ = in_ch if i == 0 else 64
+            blocks.append(
+                nn.Sequential(
+                    nn.Conv2d(in_ch_, 64, kernel_size=(5, 1), padding=(2, 0)),
+                    nn.BatchNorm2d(64),
+                    nn.ReLU(),
+                )
+            )
+        self.conv_blocks = nn.ModuleList(blocks)
+
+        # -- [2] LSTM --
+        # *** Edit Here ***        
+        hidden_units = 128 # number of hidden units for Bi-LSTM
+        # ******************
+        
+        # NOTE: enable ``bidirectional``
+        self.lstm6 = nn.LSTM(num_conv_filter, hidden_units, batch_first=True, bidirectional=True)
+        self.lstm7 = nn.LSTM(hidden_units*2, hidden_units, batch_first=True,  bidirectional=True)
+        self.dropout6 = nn.Dropout(p=0.5)
+        self.dropout7 = nn.Dropout(p=0.5)
+
+        # -- [3] Output --
+        self.out8 = nn.Conv2d(
+            hidden_units * 2,
+            num_classes,
+            1,
+            stride=1,
+            padding=0,
+        )
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """
+        Args:
+            x (torch.Tensor): shape = (B, CH, T, 1)
+        Returns:
+            torch.Tensor: shape = (B, N_CLASSES, T, 1)
+        """
+        # -- [1] Conv --
+        for block in self.conv_blocks:
+            x = block(x)
+
+        # -- [2] LSTM --
+        # Reshape: (B, CH, 1, T) -> (B, T, CH)
+        x = x.squeeze(3).transpose(1, 2)
+
+        x, _ = self.lstm6(x)
+        x = self.dropout6(x)
+        x, _ = self.lstm7(x)
+        x = self.dropout7(x)
+
+        # Reshape: (B, T, CH) -> (B, CH, T, 1)
+        x = x.transpose(1, 2).unsqueeze(3) 
+        
+        # -- [3] Output --
+        x = self.out8(x)
+        return x
+    
+class ConvolutionBlock(nn.Module):
+    def __init__(self, in_ch: int = 1, num_classes: int = None, num_layers: int = 2, k: int = 3, filters = []):
+        super().__init__()
+        if num_classes is None:
+            num_classes = len(OPENPACK_OPERATIONS)
+
+        blocks = []
+        for i in range(num_layers):
+            in_ch_ = in_ch if i == 0 else filters[i-1]
+            blocks.append(
+                nn.Sequential(
+                    nn.Conv2d(in_ch_, filters[i], kernel_size=(k, 1), padding=(2, 0)),
+                    nn.BatchNorm2d(filters[i]),
+                    nn.ReLU(),
+                )
+            )
+        self.conv_sub_blocks = nn.ModuleList(blocks)
+        self.max_pool = nn.MaxPool2d(kernel_size=k, stride=2)
+       
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:       
+        for sub_block in self.conv_sub_blocks:
+            x = sub_block(x)
+        x = self.max_pool(x)
+        return x
+
+class SelfAttentionBlock(nn.Module):
+    def __init__(self, embed_size, heads, dropout=0.1):
+        super(SelfAttentionBlock, self).__init__()
+        
+        self.norm1 = nn.LayerNorm(embed_size)
+        self.multihead_attention = nn.MultiheadAttention(embed_size, heads)
+        self.dropout = nn.Dropout(dropout)
+        self.norm2 = nn.LayerNorm(embed_size)
+        
+        self.feed_forward = nn.Sequential(
+            nn.Linear(embed_size, 4 * embed_size),
+            nn.ReLU(),
+            nn.Linear(4 * embed_size, embed_size)
+        )
+    
+    def forward(self, x):
+        residual = x
+        
+        x = self.norm1(x)
+        attention_output, _ = self.multihead_attention(x, x, x)
+        x = residual + self.dropout(attention_output)
+        
+        residual = x
+        
+        x = self.norm2(x)
+        feed_forward_output = self.feed_forward(x)
+        x = residual + self.dropout(feed_forward_output)
+        
+        return x
