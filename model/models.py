@@ -232,13 +232,23 @@ class CSNetWithFusion(nn.Module):
         self.imu_block = CSNetBlock(in_ch=12,num_classes=num_classes)
         self.keypoints_block = CSNetBlock(in_ch=17, num_classes=num_classes)
         self.e4_block =  CSNetBlock(in_ch=12, num_classes=num_classes)
-        
+        self.out = nn.Conv2d(
+            num_classes,
+            num_classes,
+            1,
+            stride=1,
+            padding=0,)
         
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
+    def forward(self, imu, keypoints, e4) -> torch.Tensor:
        
-        
-        return x
+       imu_x = self.imu_block(imu)
+       keypoints_x = self.keypoints_block(keypoints)
+       e4_x = self.e4_block(e4)
+
+       x = torch.cat([imu_x, keypoints_x, e4_x])
+       x = self.out(x)
+       return x
     
 
 class CSNetBlock(nn.Module):
@@ -339,6 +349,24 @@ class PositionalEncoding(nn.Module):
         pe[:, 0, 1::2] = torch.cos(position * div_term)
         self.register_buffer('pe', pe)
 
+    def forward(self, x):
+        """
+        Arguments:
+            x: Tensor, shape ``[seq_len, batch_size, embedding_dim]``
+        """
+        x = x + self.pe[:x.size(0)]
+        return self.dropout(x)
+    
+class FusionResultsWithConv(nn.Module):
+    def __init__(self, num_classes = 11):
+        super().__init__()
+        self.out = nn.Conv2d(
+            num_classes,
+            num_classes,
+            1,
+            stride=1,
+            padding=0,)
+        
     def forward(self, x):
         """
         Arguments:

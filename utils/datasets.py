@@ -11,7 +11,7 @@ import pandas as pd
 import numpy as np
 from omegaconf import DictConfig, open_dict
 from openpack_toolkit import OPENPACK_OPERATIONS
-from dataloader import load_e4acc
+from .dataloader import load_e4acc
 
 logger = getLogger(__name__)
 
@@ -327,26 +327,7 @@ class OpenPackAll(torch.utils.data.Dataset):
         return {"x": x, "t": t, "ts": ts}
 
 
-class OpenPackAllSplit(torch.utils.data.Dataset):
-    """Dataset class for IMU data.
-
-    Attributes:
-        data (List[Dict]): each sequence is stored in dict. The dict has 5 keys (i.e.,
-            user, session, data, label(=class index), unixtime). data is a np.ndarray with
-            shape = ``(N, channel(=acc_x, acc_y, ...), window, 1)``.
-        index (Tuple[Dict]): sample index. A dict in this tuple as 3 property.
-            ``seq`` = sequence index, ``sqg`` = segment index which is a sequential number
-            within the single sequence. ``pos`` = sample index of the start of this segment.
-        classes (optk.ActSet): list of activity classes.
-        window (int): sliding window size.
-        debug (bool): If True, enable debug mode. Default to False.
-        submission (bool): Set True when you make submission file. Annotation data will not be
-            loaded and dummy data will be generated. Default to False.
-
-    Todo:
-        * Make a minimum copy of cfg (DictConfig) before using in ``load_dataset()``.
-        * Add method for parameter validation (i.e., assert).
-    """
+class OpenPackAllSplit(torch.utils.data.Dataset):    
     data: List[Dict] = None
     index: Tuple[Dict] = None
 
@@ -360,21 +341,7 @@ class OpenPackAllSplit(torch.utils.data.Dataset):
             window_e4: int = 32 * 60,
             submission: bool = False,
             debug: bool = False,
-    ) -> None:
-        """Initialize OpenPackImu dataset class.
-
-        Args:
-            cfg (DictConfig): instance of ``optk.configs.OpenPackConfig``. path, dataset, and
-                annotation attributes must be initialized.
-            user_session (Tuple[Tuple[int, int], ...]): the list of pairs of user ID and session ID
-                to be included.
-            classes (optk.ActSet, optional): activity set definition.
-                Defaults to OPENPACK_OPERATION_CLASSES.
-            window (int, optional): window size [steps]. Defaults to 30*60 [s].
-            submission (bool, optional): Set True when you want to load test data for submission.
-                If True, the annotation data will no be replaced by dummy data. Defaults to False.
-            debug (bool, optional): enable debug mode. Defaults to False.
-        """
+    ) -> None:       
         super().__init__()
         self.classes = classes
         self.window_imu = window_imu
@@ -462,7 +429,7 @@ class OpenPackAllSplit(torch.utils.data.Dataset):
                 use_gyro=cfg.dataset.stream.gyro,
                 use_quat=cfg.dataset.stream.quat)
             
-            x_sess_imu = x_sess_imu.transpose
+            x_sess_imu = x_sess_imu.transpose(1,0)
 
             paths_e4 = []
             for device in cfg.dataset.stream.devices_e4:
@@ -492,8 +459,8 @@ class OpenPackAllSplit(torch.utils.data.Dataset):
             df_label_e4 = optk.data.load_and_resample_operation_labels(path, ts_sess_e4, classes=self.classes)
             labels_e4 = df_label_e4["act_idx"].values
 
-            index_imu, index_kp, index_e4 = 0
-            remain_imu, remain_kp, remain_e4 = True
+            index_imu, index_kp, index_e4 = 0,0,0
+            remain_imu, remain_kp, remain_e4 = True, True, True
             while (remain_imu or remain_kp or remain_e4):
                 imu_dim, _ = x_sess_imu.shape
                 kp_dim, _ = x_sess_keypoints.shape

@@ -1,8 +1,8 @@
 from logging import getLogger
 from pathlib import Path
 from typing import Dict, Optional
-from utils.datamodule import OpenPackAllDataModule
-from model.lightning_module import MyModelLM
+from utils.datamodule import OpenPackAllDataModule, OpenPackAllSplitDataModule
+from model.lightning_module import MyModelLM, SplitDataModelLM
 
 import hydra
 import numpy as np
@@ -45,8 +45,10 @@ def train(cfg: DictConfig):
     logger.debug(f"logdir = {logdir}")
     optk.utils.io.cleanup_dir(logdir, exclude="hydra")
 
-    datamodule = OpenPackAllDataModule(cfg)
-    plmodel = MyModelLM(cfg)
+    #datamodule = OpenPackAllDataModule(cfg)
+    datamodule = OpenPackAllSplitDataModule(cfg)
+    #plmodel = MyModelLM(cfg)
+    plmodel = SplitDataModelLM(cfg)
     plmodel.to(dtype=torch.float, device=device)
     logger.info(plmodel)
 
@@ -84,12 +86,14 @@ def test(cfg: DictConfig, mode: str = "test"):
     device = torch.device("cuda")
     logdir = Path(cfg.path.logdir.rootdir)
 
-    datamodule = OpenPackAllDataModule(cfg)
+    #datamodule = OpenPackAllDataModule(cfg)
+    datamodule = OpenPackAllSplitDataModule(cfg)
     datamodule.setup(mode)
 
     ckpt_path = Path(logdir, "checkpoints", "last.ckpt")
     logger.info(f"load checkpoint from {ckpt_path}")
-    plmodel = MyModelLM.load_from_checkpoint(ckpt_path, cfg=cfg)
+    #plmodel = MyModelLM.load_from_checkpoint(ckpt_path, cfg=cfg)
+    plmodel = SplitDataModelLM.load_from_checkpoint(ckpt_path, cfg=cfg)
     plmodel.to(dtype=torch.float, device=device)
 
     trainer = pl.Trainer(
