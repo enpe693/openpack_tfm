@@ -103,17 +103,23 @@ class SplitDataModelLM(optorch.lightning.BaseLightningModule):
     def training_step(self, batch: Dict, batch_idx: int) -> Dict:
         """Definition of training loop. Get mini-batch and return loss.
         """
+        print("train step")
         x_imu = batch["x_imu"].to(device=self.device, dtype=torch.float)
         x_keypoints = batch["x_keypoints"].to(device=self.device, dtype=torch.float)    
         x_e4 = batch["x_e4"].to(device=self.device, dtype=torch.float)            
         t = batch["label_imu"].to(device=self.device, dtype=torch.long)
-        y_hat = self(x_imu, x_keypoints, x_e4).squeeze(3)
 
-        #print("Input tensor size:", x.shape)
+        print("Input imu size:", x_imu.shape)
+        print("Input kp size:", x_keypoints.shape)
+        print("Input e4 size:", x_e4.shape)
+        print("Input labels size:", t.shape)
         #print("Output tensor size:", y_hat.shape)
         #print("Size of tensor after layer 1:", self.conv.weight.shape)
         #print("Size of tensor after layer 2:", self.lstm.weight.shape)
         #print("Size of tensor after layer 3:", self.attention.weight.shape)
+
+        y_hat = self([x_imu, x_keypoints, x_e4])
+        print("y_hat shape:", y_hat.shape)
 
         loss = self.criterion(y_hat, t)
         acc = self.calc_accuracy(y_hat, t)

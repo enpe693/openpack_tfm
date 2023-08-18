@@ -230,23 +230,28 @@ class CSNetWithFusion(nn.Module):
             num_classes = len(OPENPACK_OPERATIONS)
         
         self.imu_block = CSNetBlock(in_ch=12,num_classes=num_classes)
-        self.keypoints_block = CSNetBlock(in_ch=17, num_classes=num_classes)
-        self.e4_block =  CSNetBlock(in_ch=12, num_classes=num_classes)
-        self.out = nn.Conv2d(
+        self.keypoints_block = CSNetBlock(in_ch=34, num_classes=num_classes)
+        self.e4_block =  CSNetBlock(in_ch=6, num_classes=num_classes)
+        self.out = nn.ConvTranspose1d(
+            64,
             num_classes,
-            num_classes,
-            1,
-            stride=1,
-            padding=0,)
+            2,
+            stride=2,
+            padding=255)
         
 
-    def forward(self, imu, keypoints, e4) -> torch.Tensor:
-       
+    def forward(self, data) -> torch.Tensor: 
+       imu = data[0]
+       keypoints = data[1]
+       e4 = data[2]
+
        imu_x = self.imu_block(imu)
        keypoints_x = self.keypoints_block(keypoints)
        e4_x = self.e4_block(e4)
 
-       x = torch.cat([imu_x, keypoints_x, e4_x])
+       print(f"imu shape {imu_x.shape} keypoints shape {keypoints_x.shape} e4 shape {e4_x.shape} ")
+
+       x = torch.cat([imu_x, keypoints_x, e4_x],dim=2)
        x = self.out(x)
        return x
     
@@ -257,52 +262,61 @@ class CSNetBlock(nn.Module):
         if num_classes is None:
             num_classes = len(OPENPACK_OPERATIONS)
         
-        self.conv1 = ConvolutionBlock(in_ch,num_classes)
+        self.conv1 = ConvolutionBlock(in_ch)        
         self.pos = PositionalEncoding(64)
         self.attn1 = SelfAttentionBlock()
         self.attn2 = SelfAttentionBlock()
-        self.conv2 = ConvolutionBlock()
-        self.out = nn.Conv2d(
+        self.conv2 = ConvolutionBlock(in_ch=64)
+        """ self.out = nn.Conv1d(
             64,
             num_classes,
             1,
             stride=1,
             padding=0,
-        )
+        ) """
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
        
         x = self.conv1(x)
+        #print("x after conv shape ", x.shape)
+        # Reshape: (B, CH, T) -> (T, B, CH)
+        x = x.permute(2, 0, 1)
         x = self.pos(x)
+        # Reshape: (T, B, CH) -> (B, T, CH)
+        x = x.permute(1,0,2)
+        #print("x after perm ", x.shape)
         x = self.attn1(x)
         x = self.attn2(x)
+        # Reshape: (B, T, CH) -> (B, CH, T)
+        x = x.permute(0,2,1)
         x = self.conv2(x)
-        x = self.out(x)
+        #print("x after conv2", x.shape)
+        #x = self.out(x)
         return x
     
 class ConvolutionBlock(nn.Module):
-    def __init__(self, in_ch: int = 1, num_classes: int = None, num_layers: int = 2, k: int = 3, filters = [32,64]):
-        super().__init__()
-        if num_classes is None:
-            num_classes = len(OPENPACK_OPERATIONS)
+    def __init__(self, in_ch: int = 1, num_layers: int = 2, k: int = 3, filters = [32,64]):
+        super().__init__()        
 
         blocks = []
         for i in range(num_layers):
             in_ch_ = in_ch if i == 0 else filters[i-1]
             blocks.append(
                 nn.Sequential(
-                    nn.Conv2d(in_ch_, filters[i], kernel_size=(k, 1), padding=(2, 0)),
-                    nn.BatchNorm2d(filters[i]),
+                    nn.Conv1d(in_ch_, filters[i], kernel_size=k, padding='same'),
+                    nn.BatchNorm1d(filters[i]),
                     nn.ReLU(),
                 )
             )
         self.conv_sub_blocks = nn.ModuleList(blocks)
-        self.max_pool = nn.MaxPool2d(kernel_size=k, stride=2)
+        self.max_pool = nn.MaxPool1d(kernel_size=k, stride=2,padding=1)
        
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:       
+    def forward(self, x: torch.Tensor) -> torch.Tensor:         
         for sub_block in self.conv_sub_blocks:
+            #print("iter")
             x = sub_block(x)
+        #print("x shape", x.shape)
         x = self.max_pool(x)
         return x
 
@@ -358,19 +372,17 @@ class PositionalEncoding(nn.Module):
         return self.dropout(x)
     
 class FusionResultsWithConv(nn.Module):
-    def __init__(self, num_classes = 11):
+    def __init__(self, input_shapes, seq_length = 1800, num_classes = 11):
         super().__init__()
-        self.out = nn.Conv2d(
-            num_classes,
-            num_classes,
-            1,
-            stride=1,
-            padding=0,)
+        self.linear1 = nn.Linear(input_shapes[0][-1], seq_length)
+        self.linear2 = nn.Linear(input_shapes[1][-1], seq_length)
+        self.linear3 = nn.Linear(input_shapes[2][-1], seq_length)
         
-    def forward(self, x):
-        """
-        Arguments:
-            x: Tensor, shape ``[seq_len, batch_size, embedding_dim]``
-        """
-        x = x + self.pe[:x.size(0)]
-        return self.dropout(x)
+    def forward(self, tensor1, tensor2, tensor3):
+        fused_tensor1 = self.linear1(tensor1)
+        fused_tensor2 = self.linear2(tensor2)
+        fused_tensor3 = self.linear3(tensor3)
+
+        fused_output = fused_tensor1 + fused_tensor2 + fused_tensor3
+
+        return fused_output

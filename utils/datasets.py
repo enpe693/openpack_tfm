@@ -12,6 +12,7 @@ import numpy as np
 from omegaconf import DictConfig, open_dict
 from openpack_toolkit import OPENPACK_OPERATIONS
 from .dataloader import load_e4acc
+import math
 
 logger = getLogger(__name__)
 
@@ -429,7 +430,7 @@ class OpenPackAllSplit(torch.utils.data.Dataset):
                 use_gyro=cfg.dataset.stream.gyro,
                 use_quat=cfg.dataset.stream.quat)
             
-            x_sess_imu = x_sess_imu.transpose(1,0)
+            #x_sess_imu = x_sess_imu.transpose(1,0)
 
             paths_e4 = []
             for device in cfg.dataset.stream.devices_e4:
@@ -456,79 +457,94 @@ class OpenPackAllSplit(torch.utils.data.Dataset):
             df_label_keypoints = optk.data.load_and_resample_operation_labels(path, ts_sess_keypoints, classes=self.classes)
             labels_keypoints = df_label_keypoints["act_idx"].values
 
-            df_label_e4 = optk.data.load_and_resample_operation_labels(path, ts_sess_e4, classes=self.classes)
-            labels_e4 = df_label_e4["act_idx"].values
+            if (ts_sess_e4 is None):
+                print("E4 error")
+                labels_e4 = np.full(math.ceil(1.05*x_sess_imu.shape[1]), self.classes.get_ignore_class_index())
+                x_sess_e4 = np.full((6,math.ceil(1.05*x_sess_imu.shape[1])), 0.0)
+            else:
+                df_label_e4 = optk.data.load_and_resample_operation_labels(path, ts_sess_e4, classes=self.classes)
+                labels_e4 = df_label_e4["act_idx"].values
 
             index_imu, index_kp, index_e4 = 0,0,0
             remain_imu, remain_kp, remain_e4 = True, True, True
-            while (remain_imu or remain_kp or remain_e4):
-                imu_dim, _ = x_sess_imu.shape
-                kp_dim, _ = x_sess_keypoints.shape
-                e4_dim, _ = x_sess_e4.shape
+            imu_dim, imu_len = x_sess_imu.shape
+            kp_dim, kp_len = x_sess_keypoints.shape
+            e4_dim, e4_len = x_sess_e4.shape
+            print(f"imu_len length {imu_len}")
+            print(f"kp_len length {kp_len}")
+            print(f"e4 length {e4_len}")
+            while (remain_imu or remain_kp or remain_e4):                
 
-                if (index_imu + window_imu <= len(x_sess_imu)):
-                    data["imu"][index] = x_sess_imu[:, index_imu:index_imu + window_imu]
-                    labels["imu"][index] = labels_imu[index_imu:index_imu + window_imu]
+                if (index_imu + window_imu <= imu_len):
+                    data["imu"].append(x_sess_imu[:, index_imu:index_imu + window_imu])
+                    labels["imu"].append( labels_imu[index_imu:index_imu + window_imu])
                     index_imu = index_imu + window_imu
                 else:
                     remain_imu = False
-                    diff_imu = len(x_sess_imu) - index_imu
+                    diff_imu = imu_len - index_imu
                     if (diff_imu > 0):
                         arr = x_sess_imu[:, index_imu:-1]
-                        padded_x = np.pad(arr, [(0, 0), (0, window_imu - diff_imu)], mode='constant', constant_values=0)
+                        padded_x = np.pad(arr, [(0, 0), (0, window_imu - diff_imu + 1)], mode='constant', constant_values=0.0)
                         arr = labels_imu[index_imu:-1]
-                        padded_label = np.pad(arr, (0, window_imu - diff_imu), mode='constant', constant_values=self.classes.get_ignore_class_index())
-                        data["imu"][index] = padded_x
-                        labels["imu"][index] = padded_label
+                        padded_label = np.pad(arr, (0, window_imu - diff_imu + 1), mode='constant', constant_values=self.classes.get_ignore_class_index())
+                        data["imu"].append(padded_x)
+                        labels["imu"].append(padded_label)
                         index_imu = index_imu + window_imu
                     else:
-                        data["imu"][index] = np.full((imu_dim, window_imu), 0)
-                        labels["imu"][index] = np.full((1, window_imu), self.classes.get_ignore_class_index())
+                        data["imu"].append(np.full((imu_dim, window_imu), 0.0))
+                        labels["imu"].append(np.full((1, window_imu), self.classes.get_ignore_class_index()))
 
-                if (index_kp + window_keypoint <= len(x_sess_keypoints)):
-                    data["keypoints"][index] = x_sess_keypoints[:, index_kp:index_kp + window_keypoint]
-                    labels["keypoints"][index] = labels_keypoints[index_kp:index_kp + window_keypoint]
+                if (index_kp + window_keypoint <= kp_len):
+                    data["keypoints"].append(x_sess_keypoints[:, index_kp:index_kp + window_keypoint])
+                    labels["keypoints"].append(labels_keypoints[index_kp:index_kp + window_keypoint])
                     index_kp = index_kp + window_keypoint
                 else:
                     remain_kp = False
-                    diff_kp = len(x_sess_keypoints) - index_kp
+                    diff_kp = kp_len - index_kp
                     if (diff_kp > 0):
                         arr = x_sess_keypoints[:, index_kp:-1]
-                        padded_x = np.pad(arr, [(0, 0), (0, window_keypoint - diff_kp)], mode='constant', constant_values=0)
+                        padded_x = np.pad(arr, [(0, 0), (0, window_keypoint - diff_kp + 1)], mode='constant', constant_values=0.0)
                         arr = labels_keypoints[index_kp:-1]
-                        padded_label = np.pad(arr, (0, window_keypoint - diff_kp), mode='constant', constant_values=self.classes.get_ignore_class_index())
-                        data["keypoints"][index] = padded_x
-                        labels["keypoints"][index] = padded_label
+                        padded_label = np.pad(arr, (0, window_keypoint - diff_kp + 1), mode='constant', constant_values=self.classes.get_ignore_class_index())
+                        data["keypoints"].append( padded_x)
+                        labels["keypoints"].append( padded_label)
                         index_kp = index_kp + window_keypoint
                     else:
-                        data["keypoints"][index] = np.full((kp_dim, window_keypoint), 0)
-                        labels["keypoints"][index] = np.full((1, window_keypoint), self.classes.get_ignore_class_index())
+                        data["keypoints"].append(np.full((kp_dim, window_keypoint), 0.0))
+                        labels["keypoints"].append(np.full((1, window_keypoint), self.classes.get_ignore_class_index()))
 
                 
-                if (index_e4 + window_e4 <= len(x_sess_e4)):
-                    data["e4"][index] = x_sess_e4[:, index_e4:index_e4 + window_e4]
-                    labels["e4"][index] = labels_e4[index_e4:index_e4 + window_e4]
+                if (index_e4 + window_e4 <= e4_len):
+                    data["e4"].append(x_sess_e4[:, index_e4:index_e4 + window_e4])
+                    labels["e4"].append(labels_e4[index_e4:index_e4 + window_e4])
                     index_e4 = index_e4 + window_e4
                 else:
                     remain_e4 = False
-                    diff_e4 = len(x_sess_e4) - index_e4
+                    diff_e4 = e4_len - index_e4
                     if (diff_e4 > 0):
                         arr = x_sess_e4[:, index_e4:-1]
-                        padded_x = np.pad(arr, [(0, 0), (0, window_e4 - diff_e4)], mode='constant', constant_values=0)
+                        padded_x = np.pad(arr, [(0, 0), (0, window_e4 - diff_e4 + 1)], mode='constant', constant_values=0.0)
                         arr = labels_e4[index_e4:-1]
-                        padded_label = np.pad(arr, (0, window_e4 - diff_e4), mode='constant', constant_values=self.classes.get_ignore_class_index())
-                        data["e4"][index] = padded_x
-                        labels["e4"][index] = padded_label
+                        padded_label = np.pad(arr, (0, window_e4 - diff_e4 + 1), mode='constant', constant_values=self.classes.get_ignore_class_index())
+                        data["e4"].append(padded_x)
+                        labels["e4"].append(padded_label)
                         index_e4 = index_e4 + window_e4
                     else:
-                        data["e4"][index] = np.full((e4_dim, window_e4), 0)
-                        labels["e4"][index] = np.full((1, window_e4), self.classes.get_ignore_class_index())
+                        data["e4"].append(np.full((e4_dim, window_e4), 0.0))
+                        labels["e4"].append(np.full((1, window_e4), self.classes.get_ignore_class_index()))
                 
                 index += 1
             
         self.data = data
         self.labels = labels 
-        self.length = index 
+        self.length = index
+        #print("Length: ",self.length)
+        assert len(data["keypoints"]) == len(data["imu"]) == len(data["e4"]), "every modality should have the same length"
+        #for i, kp_list in enumerate(data["keypoints"]):
+            #print(f"kp {i} : {len(kp_list)}")
+            #print(kp_list.shape)
+
+
     
     def load_dataset_keypoints(
         self,
@@ -607,7 +623,7 @@ class OpenPackAllSplit(torch.utils.data.Dataset):
         return self
 
     def __getitem__(self, index: int) -> Dict:
-        print(f"getitem {index}")
+        #print(f"getitem {index}")
 
         x_keypoints = self.data["keypoints"][index]
         label_keypoints = self.labels["keypoints"][index]
@@ -627,9 +643,12 @@ class OpenPackAllSplit(torch.utils.data.Dataset):
 
         x_e4 = torch.from_numpy(x_e4)
         label_e4 = torch.from_numpy(label_e4)
-       
+
+        #print(f"imu shapes {x_imu.shape} {label_imu.shape}")
+        #print(f"keypoints shapes {x_keypoints.shape} {label_keypoints.shape}")
+        #print(f"e4 shapes {x_e4.shape} {label_e4.shape}")
         
-        return {"x_keypoints": x_keypoints, "label_keypoints": label_keypoints, "x_imu": x_imu, "label_imu": label_imu, "x_e4": x_e4, "label_e4": label_e4}
+        return {"x_keypoints": x_keypoints.squeeze(), "label_keypoints": label_keypoints.squeeze(), "x_imu": x_imu.squeeze(), "label_imu": label_imu.squeeze(), "x_e4": x_e4.squeeze(), "label_e4": label_e4.squeeze()}
 
 
     

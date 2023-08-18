@@ -69,6 +69,7 @@ def train(cfg: DictConfig):
         enable_checkpointing=True,
         callbacks=[checkpoint_callback],
     )
+    print("training")
     logger.debug(f"logdir = {logdir}")
 
     logger.info(f"Start training for {num_epoch} epochs.")
