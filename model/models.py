@@ -229,15 +229,16 @@ class CSNetWithFusion(nn.Module):
         if num_classes is None:
             num_classes = len(OPENPACK_OPERATIONS)
         
-        self.imu_block = CSNetBlock(in_ch=12,num_classes=num_classes)
-        self.keypoints_block = CSNetBlock(in_ch=34, num_classes=num_classes)
-        self.e4_block =  CSNetBlock(in_ch=6, num_classes=num_classes)
-        self.out = nn.ConvTranspose1d(
-            64,
+        self.imu_block = CSNetBlock(in_ch=12,num_classes=num_classes, reshape_len=225)
+        self.keypoints_block = CSNetBlock(in_ch=34, num_classes=num_classes, reshape_len=113)
+        self.e4_block =  CSNetBlock(in_ch=6, num_classes=num_classes, reshape_len=240)
+        self.out = nn.Conv1d(
+            3,
             num_classes,
-            2,
-            stride=2,
-            padding=255)
+            1,
+            stride=1,
+            padding="same",
+        )
         
 
     def forward(self, data) -> torch.Tensor: 
@@ -249,15 +250,17 @@ class CSNetWithFusion(nn.Module):
        keypoints_x = self.keypoints_block(keypoints)
        e4_x = self.e4_block(e4)
 
-       print(f"imu shape {imu_x.shape} keypoints shape {keypoints_x.shape} e4 shape {e4_x.shape} ")
+       #print(f"imu shape {imu_x.shape} keypoints shape {keypoints_x.shape} e4 shape {e4_x.shape} ")
 
-       x = torch.cat([imu_x, keypoints_x, e4_x],dim=2)
+       #x = torch.cat([imu_x, keypoints_x, e4_x],dim=2)
+       x = torch.stack([imu_x, keypoints_x, e4_x], dim=0)
+       x = x.permute(1,0,2)
        x = self.out(x)
        return x
     
 
 class CSNetBlock(nn.Module):
-    def __init__(self, in_ch: int = 46, num_classes: int = None):
+    def __init__(self, in_ch: int = 46, num_classes: int = None, reshape_len = 0):
         super().__init__()
         if num_classes is None:
             num_classes = len(OPENPACK_OPERATIONS)
@@ -267,6 +270,8 @@ class CSNetBlock(nn.Module):
         self.attn1 = SelfAttentionBlock()
         self.attn2 = SelfAttentionBlock()
         self.conv2 = ConvolutionBlock(in_ch=64)
+        self.maxpool = nn.MaxPool1d(kernel_size=1, stride=2)
+        self.reshape = ReshapeBlock(length=reshape_len)
         """ self.out = nn.Conv1d(
             64,
             num_classes,
@@ -290,6 +295,8 @@ class CSNetBlock(nn.Module):
         # Reshape: (B, T, CH) -> (B, CH, T)
         x = x.permute(0,2,1)
         x = self.conv2(x)
+        x = self.maxpool(x)
+        x = self.reshape(x)        
         #print("x after conv2", x.shape)
         #x = self.out(x)
         return x
@@ -386,3 +393,15 @@ class FusionResultsWithConv(nn.Module):
         fused_output = fused_tensor1 + fused_tensor2 + fused_tensor3
 
         return fused_output
+    
+class ReshapeBlock(nn.Module):
+    def __init__(self, channels = 32, length = 450 ):
+        super(ReshapeBlock, self).__init__()        
+        self.fc = nn.Linear(in_features=channels*length*2, out_features=32)  
+        self.decode = nn.Linear(in_features=32, out_features=1800)  
+
+    def forward(self, x):        
+        x = torch.flatten(x, start_dim=1)
+        x = self.fc(x)
+        x = self.decode(x)        
+        return x

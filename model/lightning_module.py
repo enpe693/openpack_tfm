@@ -20,8 +20,6 @@ import seaborn as sns
 from hydra import initialize_config_dir, compose
 from omegaconf import DictConfig, OmegaConf
 from torchinfo import summary
-
-
 from openpack_toolkit import OPENPACK_OPERATIONS
 
 class MyModelLM(optorch.lightning.BaseLightningModule):
@@ -109,20 +107,28 @@ class SplitDataModelLM(optorch.lightning.BaseLightningModule):
         x_e4 = batch["x_e4"].to(device=self.device, dtype=torch.float)            
         t = batch["label_imu"].to(device=self.device, dtype=torch.long)
 
-        print("Input imu size:", x_imu.shape)
-        print("Input kp size:", x_keypoints.shape)
-        print("Input e4 size:", x_e4.shape)
-        print("Input labels size:", t.shape)
+        #print("Input imu size:", x_imu.shape)
+        #print("Input kp size:", x_keypoints.shape)
+        #print("Input e4 size:", x_e4.shape)
+        #print("Input labels size:", t.shape)
         #print("Output tensor size:", y_hat.shape)
         #print("Size of tensor after layer 1:", self.conv.weight.shape)
         #print("Size of tensor after layer 2:", self.lstm.weight.shape)
         #print("Size of tensor after layer 3:", self.attention.weight.shape)
 
         y_hat = self([x_imu, x_keypoints, x_e4])
-        print("y_hat shape:", y_hat.shape)
+        #print("y_hat shape:", y_hat.shape)
 
         loss = self.criterion(y_hat, t)
         acc = self.calc_accuracy(y_hat, t)
+        self.log_dict ( {
+            "train_loss": loss,
+            "train_acc": acc
+            },
+            on_step=False,
+            on_epoch = True,
+            prog_bar=True
+        )
         return {"loss": loss, "acc": acc}
 
     def test_step(self, batch: Dict, batch_idx: int) -> Dict:
