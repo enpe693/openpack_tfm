@@ -134,9 +134,10 @@ class SplitDataModelLM(optorch.lightning.BaseLightningModule):
         x_keypoints = batch["x_keypoints"].to(device=self.device, dtype=torch.float)    
         x_e4 = batch["x_e4"].to(device=self.device, dtype=torch.float)            
         t = batch["label_imu"].to(device=self.device, dtype=torch.long)
+        ts = batch["times_imu"]
         y_hat = self([x_imu, x_keypoints, x_e4])
 
-        outputs = dict(t=t, y=y_hat)
+        outputs = dict(t=t, y=y_hat,unixtime=ts)
         return outputs
     
         

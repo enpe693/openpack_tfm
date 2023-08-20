@@ -4,13 +4,22 @@
     // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
     "version": "0.2.0",
     "configurations": [
-
         {
             "name": "Train debug",
             "type": "python",
             "request": "launch",
             "program": "${file}",
             "args": ["mode=train", "debug=true"],
+            "console": "integratedTerminal",            
+            "justMyCode": false
+        },
+
+        {
+            "name": "Test with path",
+            "type": "python",
+            "request": "launch",
+            "program": "${file}",
+            "args": ["mode=test", "debug=false", "model_path=C:\\Users\\Ego\\Documents\\TFM\\dataset\\openpack\\v0.3.1\\log\\all-devices-dataset\\CSNetWithFusion\\s2\\tb_logs\\feature_fusion\\version_0\\checkpoints"],
             "console": "integratedTerminal",            
             "justMyCode": false
         }

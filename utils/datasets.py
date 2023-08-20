@@ -463,6 +463,7 @@ class OpenPackAllSplit(torch.utils.data.Dataset):
                 print("E4 error")
                 labels_e4 = np.full(math.ceil(1.05*x_sess_imu.shape[1]), self.classes.get_ignore_class_index())
                 x_sess_e4 = np.full((6,math.ceil(1.05*x_sess_imu.shape[1])), 0.0)
+                ts_sess_e4 = np.linspace(ts_sess_imu[0], ts_sess_imu[-1], math.ceil(1.05*x_sess_imu.shape[1]))
             else:
                 df_label_e4 = optk.data.load_and_resample_operation_labels(path, ts_sess_e4, classes=self.classes)
                 labels_e4 = df_label_e4["act_idx"].values
@@ -475,11 +476,13 @@ class OpenPackAllSplit(torch.utils.data.Dataset):
             print(f"imu_len length {imu_len}")
             print(f"kp_len length {kp_len}")
             print(f"e4 length {e4_len}")
+            last_value_imu, last_value_kp, last_value_e4 = ts_sess_imu[-1],ts_sess_keypoints[-1],ts_sess_e4[-1]
             while (remain_imu or remain_kp or remain_e4):                
 
                 if (index_imu + window_imu <= imu_len):
                     data["imu"].append(x_sess_imu[:, index_imu:index_imu + window_imu])
                     labels["imu"].append( labels_imu[index_imu:index_imu + window_imu])
+                    times["imu"].append( ts_sess_imu[index_imu:index_imu + window_imu])
                     index_imu = index_imu + window_imu
                 else:
                     remain_imu = False
@@ -489,16 +492,22 @@ class OpenPackAllSplit(torch.utils.data.Dataset):
                         padded_x = np.pad(arr, [(0, 0), (0, window_imu - diff_imu + 1)], mode='constant', constant_values=0.0)
                         arr = labels_imu[index_imu:-1]
                         padded_label = np.pad(arr, (0, window_imu - diff_imu + 1), mode='constant', constant_values=self.classes.get_ignore_class_index())
+                        arr = ts_sess_imu[index_imu:-1]
+                        last_value_imu = arr[-1]
+                        padded_t = np.pad(arr, (0, window_imu - diff_imu + 1), mode='constant', constant_values=last_value_imu)
                         data["imu"].append(padded_x)
                         labels["imu"].append(padded_label)
+                        times["imu"].append(padded_t)
                         index_imu = index_imu + window_imu
                     else:
                         data["imu"].append(np.full((imu_dim, window_imu), 0.0))
                         labels["imu"].append(np.full((1, window_imu), self.classes.get_ignore_class_index()))
+                        times["imu"].append(np.full((1, window_imu), last_value_imu))
 
                 if (index_kp + window_keypoint <= kp_len):
                     data["keypoints"].append(x_sess_keypoints[:, index_kp:index_kp + window_keypoint])
                     labels["keypoints"].append(labels_keypoints[index_kp:index_kp + window_keypoint])
+                    times["keypoints"].append( ts_sess_keypoints[index_kp:index_kp + window_keypoint])
                     index_kp = index_kp + window_keypoint
                 else:
                     remain_kp = False
@@ -508,17 +517,23 @@ class OpenPackAllSplit(torch.utils.data.Dataset):
                         padded_x = np.pad(arr, [(0, 0), (0, window_keypoint - diff_kp + 1)], mode='constant', constant_values=0.0)
                         arr = labels_keypoints[index_kp:-1]
                         padded_label = np.pad(arr, (0, window_keypoint - diff_kp + 1), mode='constant', constant_values=self.classes.get_ignore_class_index())
+                        arr = ts_sess_keypoints[index_kp:-1]
+                        last_value_kp = arr[-1]
+                        padded_t = np.pad(arr, (0, window_keypoint - diff_kp + 1), mode='constant', constant_values=last_value_kp)
                         data["keypoints"].append( padded_x)
                         labels["keypoints"].append( padded_label)
+                        times["keypoints"].append(padded_t)
                         index_kp = index_kp + window_keypoint
                     else:
                         data["keypoints"].append(np.full((kp_dim, window_keypoint), 0.0))
                         labels["keypoints"].append(np.full((1, window_keypoint), self.classes.get_ignore_class_index()))
+                        times["keypoints"].append(np.full((1, window_keypoint), last_value_kp))
 
                 
                 if (index_e4 + window_e4 <= e4_len):
                     data["e4"].append(x_sess_e4[:, index_e4:index_e4 + window_e4])
                     labels["e4"].append(labels_e4[index_e4:index_e4 + window_e4])
+                    times["e4"].append( ts_sess_e4[index_e4:index_e4 + window_e4])
                     index_e4 = index_e4 + window_e4
                 else:
                     remain_e4 = False
@@ -528,17 +543,23 @@ class OpenPackAllSplit(torch.utils.data.Dataset):
                         padded_x = np.pad(arr, [(0, 0), (0, window_e4 - diff_e4 + 1)], mode='constant', constant_values=0.0)
                         arr = labels_e4[index_e4:-1]
                         padded_label = np.pad(arr, (0, window_e4 - diff_e4 + 1), mode='constant', constant_values=self.classes.get_ignore_class_index())
+                        arr = ts_sess_e4[index_e4:-1]
+                        last_value_e4 = arr[-1]
+                        padded_t = np.pad(arr, (0, window_e4 - diff_e4 + 1), mode='constant', constant_values=last_value_e4)
                         data["e4"].append(padded_x)
                         labels["e4"].append(padded_label)
+                        times["e4"].append(padded_t)
                         index_e4 = index_e4 + window_e4
                     else:
                         data["e4"].append(np.full((e4_dim, window_e4), 0.0))
                         labels["e4"].append(np.full((1, window_e4), self.classes.get_ignore_class_index()))
+                        times["e4"].append(np.full((1, window_e4), last_value_e4))
                 
                 index += 1
             
         self.data = data
         self.labels = labels 
+        self.times = times
         self.length = index
         #print("Length: ",self.length)
         assert len(data["keypoints"]) == len(data["imu"]) == len(data["e4"]), "every modality should have the same length"
@@ -629,28 +650,34 @@ class OpenPackAllSplit(torch.utils.data.Dataset):
 
         x_keypoints = self.data["keypoints"][index]
         label_keypoints = self.labels["keypoints"][index]
+        times_keypoints = self.times["keypoints"][index]
         
         x_imu = self.data["imu"][index]
         label_imu = self.labels["imu"][index]
+        times_imu = self.times["imu"][index]
 
         x_e4 = self.data["e4"][index]
         label_e4 = self.labels["e4"][index]
+        times_e4 = self.times["e4"][index]
 
         #print(f"x t shapes {x.shape} {t.shape}")
         x_keypoints = torch.from_numpy(x_keypoints)
         label_keypoints = torch.from_numpy(label_keypoints)
+        times_keypoints = torch.from_numpy(times_keypoints)
 
         x_imu =  torch.from_numpy(x_imu)
         label_imu =  torch.from_numpy(label_imu)
+        times_imu = torch.from_numpy(times_imu)
 
         x_e4 = torch.from_numpy(x_e4)
         label_e4 = torch.from_numpy(label_e4)
+        times_e4 = torch.from_numpy(times_e4)
 
         #print(f"imu shapes {x_imu.shape} {label_imu.shape}")
         #print(f"keypoints shapes {x_keypoints.shape} {label_keypoints.shape}")
         #print(f"e4 shapes {x_e4.shape} {label_e4.shape}")
         
-        return {"x_keypoints": x_keypoints.squeeze(), "label_keypoints": label_keypoints.squeeze(), "x_imu": x_imu.squeeze(), "label_imu": label_imu.squeeze(), "x_e4": x_e4.squeeze(), "label_e4": label_e4.squeeze()}
+        return {"x_keypoints": x_keypoints.squeeze(), "label_keypoints": label_keypoints.squeeze(), "times_keypoints": times_keypoints.squeeze(),"x_imu": x_imu.squeeze(), "label_imu": label_imu.squeeze(), "times_imu": times_imu.squeeze(),"x_e4": x_e4.squeeze(), "label_e4": label_e4.squeeze(), "times_e4": times_e4.squeeze()}
 
 
     
