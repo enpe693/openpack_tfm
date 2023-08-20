@@ -3,7 +3,7 @@ defaults:
   - override hydra/job_logging: none
   - _self_
 datarootdir: C:\Users\Ego\Documents\TFM\dataset\openpack\v0.3.1
-issue: "s1"
+issue: "s2"
 hydra:
   run:
     dir: ${path.logdir.rootdir}
