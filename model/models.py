@@ -235,7 +235,7 @@ class CSNetWithFusion(nn.Module):
         self.out = nn.Conv1d(
             3,
             num_classes,
-            1,
+            3,
             stride=1,
             padding="same",
         )
@@ -266,10 +266,10 @@ class CSNetBlock(nn.Module):
             num_classes = len(OPENPACK_OPERATIONS)
         
         self.conv1 = ConvolutionBlock(in_ch)        
-        self.pos = PositionalEncoding(64)
+        self.pos = PositionalEncoding(32)
         self.attn1 = SelfAttentionBlock()
         self.attn2 = SelfAttentionBlock()
-        self.conv2 = ConvolutionBlock(in_ch=64)
+        self.conv2 = ConvolutionBlock(in_ch=32)
         self.maxpool = nn.MaxPool1d(kernel_size=1, stride=2)
         self.reshape = ReshapeBlock(length=reshape_len)
         """ self.out = nn.Conv1d(
@@ -302,7 +302,7 @@ class CSNetBlock(nn.Module):
         return x
     
 class ConvolutionBlock(nn.Module):
-    def __init__(self, in_ch: int = 1, num_layers: int = 2, k: int = 3, filters = [32,64]):
+    def __init__(self, in_ch: int = 1, num_layers: int = 2, k: int = 3, filters = [32,32]):
         super().__init__()        
 
         blocks = []
@@ -328,7 +328,7 @@ class ConvolutionBlock(nn.Module):
         return x
 
 class SelfAttentionBlock(nn.Module):
-    def __init__(self, embed_size=64, heads=8, dropout=0.1):
+    def __init__(self, embed_size=32, heads=8, dropout=0.1):
         super(SelfAttentionBlock, self).__init__()
         
         self.norm1 = nn.LayerNorm(embed_size)
@@ -397,8 +397,8 @@ class FusionResultsWithConv(nn.Module):
 class ReshapeBlock(nn.Module):
     def __init__(self, channels = 32, length = 450 ):
         super(ReshapeBlock, self).__init__()        
-        self.fc = nn.Linear(in_features=channels*length*2, out_features=32)  
-        self.decode = nn.Linear(in_features=32, out_features=1800)  
+        self.fc = nn.Linear(in_features=channels*length, out_features=64)  
+        self.decode = nn.Linear(in_features=64, out_features=1800)  
 
     def forward(self, x):        
         x = torch.flatten(x, start_dim=1)

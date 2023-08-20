@@ -120,15 +120,11 @@ class SplitDataModelLM(optorch.lightning.BaseLightningModule):
         #print("y_hat shape:", y_hat.shape)
 
         loss = self.criterion(y_hat, t)
-        acc = self.calc_accuracy(y_hat, t)
-        self.log_dict ( {
-            "train_loss": loss,
-            "train_acc": acc
-            },
-            on_step=False,
-            on_epoch = True,
-            prog_bar=True
-        )
+        acc = self.calc_accuracy(y_hat, t)     
+
+        self.log("train_loss",loss, on_epoch=True, on_step=False)
+        self.log("train_acc",acc, on_epoch=True, on_step=False)   
+
         return {"loss": loss, "acc": acc}
 
     def test_step(self, batch: Dict, batch_idx: int) -> Dict:
@@ -142,3 +138,7 @@ class SplitDataModelLM(optorch.lightning.BaseLightningModule):
 
         outputs = dict(t=t, y=y_hat)
         return outputs
+    
+        
+        
+

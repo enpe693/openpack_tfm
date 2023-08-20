@@ -10,6 +10,7 @@ import openpack_toolkit as optk
 import openpack_torch as optorch
 import pandas as pd
 import pytorch_lightning as pl
+from pytorch_lightning.loggers import TensorBoardLogger
 import torch
 from omegaconf import DictConfig, OmegaConf
 from openpack_toolkit import OPENPACK_OPERATIONS
@@ -18,6 +19,7 @@ from openpack_toolkit.codalab.operation_segmentation import (
     make_submission_zipfile)
 
 logger = getLogger(__name__)
+tensorboard_logger = TensorBoardLogger("tb_logs", name="my_model2")
 optorch.configs.register_configs()
 optorch.utils.reset_seed()
 
@@ -63,7 +65,7 @@ def train(cfg: DictConfig):
     trainer = pl.Trainer(
         gpus=[0],
         max_epochs=num_epoch,
-        logger=False,  # disable logging module
+        logger=tensorboard_logger,  # disable logging module
         default_root_dir=logdir,
         enable_progress_bar=False,  # disable progress bar
         enable_checkpointing=True,
