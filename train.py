@@ -93,7 +93,10 @@ def test(cfg: DictConfig, mode: str = "test"):
     datamodule = OpenPackAllSplitDataModule(cfg)
     datamodule.setup(mode)
 
-    ckpt_path = Path(logdir, "checkpoints", "last.ckpt")
+    if (not cfg.model_path):
+        ckpt_path = Path(logdir, "checkpoints", "last.ckpt")
+    else:
+        ckpt_path = Path(cfg.model_path, "last.ckpt")
     logger.info(f"load checkpoint from {ckpt_path}")
     #plmodel = MyModelLM.load_from_checkpoint(ckpt_path, cfg=cfg)
     plmodel = SplitDataModelLM.load_from_checkpoint(ckpt_path, cfg=cfg)

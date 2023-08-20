@@ -13,6 +13,7 @@ from omegaconf import DictConfig, open_dict
 from openpack_toolkit import OPENPACK_OPERATIONS
 from .dataloader import load_e4acc
 import math
+import sys
 
 logger = getLogger(__name__)
 
@@ -393,6 +394,7 @@ class OpenPackAllSplit(torch.utils.data.Dataset):
         #data, index = [], []
         data = dict(imu=[], keypoints=[], e4=[])
         labels = dict(imu=[], keypoints=[], e4=[])
+        times = dict(imu=[], keypoints=[], e4=[])
         index = 0
         for seq_idx, (user, session) in enumerate(user_session_list):
             print(f"user {user}, session {session}")

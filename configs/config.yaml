@@ -10,6 +10,7 @@ hydra:
   job:
     chdir: true
 debug: true
+model_path: ""
 mode: "test"
 model:
   name: CSNetWithFusion
