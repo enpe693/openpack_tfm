@@ -463,7 +463,7 @@ class OpenPackAllSplit(torch.utils.data.Dataset):
                 print("E4 error")
                 labels_e4 = np.full(math.ceil(1.05*x_sess_imu.shape[1]), self.classes.get_ignore_class_index())
                 x_sess_e4 = np.full((6,math.ceil(1.05*x_sess_imu.shape[1])), 0.0)
-                ts_sess_e4 = np.linspace(ts_sess_imu[0], ts_sess_imu[-1], math.ceil(1.05*x_sess_imu.shape[1]))
+                ts_sess_e4 = np.linspace(ts_sess_imu[0], ts_sess_imu[-1], math.ceil(1.05*x_sess_imu.shape[1])).round().astype(int)
             else:
                 df_label_e4 = optk.data.load_and_resample_operation_labels(path, ts_sess_e4, classes=self.classes)
                 labels_e4 = df_label_e4["act_idx"].values

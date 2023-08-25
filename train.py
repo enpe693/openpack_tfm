@@ -19,7 +19,7 @@ from openpack_toolkit.codalab.operation_segmentation import (
     make_submission_zipfile)
 
 logger = getLogger(__name__)
-tensorboard_logger = TensorBoardLogger("tb_logs", name="feature_fusion")
+tensorboard_logger = TensorBoardLogger("tb_logs", name="feature_fusion2")
 optorch.configs.register_configs()
 optorch.utils.reset_seed()
 

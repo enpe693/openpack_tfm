@@ -235,7 +235,7 @@ class CSNetWithFusion(nn.Module):
         self.out = nn.Conv1d(
             3,
             num_classes,
-            3,
+            10,
             stride=1,
             padding="same",
         )
@@ -302,7 +302,7 @@ class CSNetBlock(nn.Module):
         return x
     
 class ConvolutionBlock(nn.Module):
-    def __init__(self, in_ch: int = 1, num_layers: int = 2, k: int = 3, filters = [32,32]):
+    def __init__(self, in_ch: int = 1, num_layers: int = 2, k: int = 3, filters = [64,32]):
         super().__init__()        
 
         blocks = []
@@ -397,8 +397,8 @@ class FusionResultsWithConv(nn.Module):
 class ReshapeBlock(nn.Module):
     def __init__(self, channels = 32, length = 450 ):
         super(ReshapeBlock, self).__init__()        
-        self.fc = nn.Linear(in_features=channels*length, out_features=64)  
-        self.decode = nn.Linear(in_features=64, out_features=1800)  
+        self.fc = nn.Linear(in_features=channels*length, out_features=80)  
+        self.decode = nn.Linear(in_features=80, out_features=1800)  
 
     def forward(self, x):        
         x = torch.flatten(x, start_dim=1)
