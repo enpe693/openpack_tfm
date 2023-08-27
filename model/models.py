@@ -258,7 +258,29 @@ class CSNetWithFusion(nn.Module):
        x = self.out(x)
        return x
     
+class CSNetWithSensorFusion(nn.Module):
+    def __init__(self, in_ch: int = 46, num_classes: int = None):
+        super().__init__()
+        if num_classes is None:
+            num_classes = len(OPENPACK_OPERATIONS)
+        
+        self.csnet_block = CSNetBlock(in_ch=52,num_classes=num_classes, reshape_len=113)       
+        self.out = nn.Conv1d(
+            1,
+            num_classes,
+            10,
+            stride=1,
+            padding="same",
+        )
+        
 
+    def forward(self, data) -> torch.Tensor: 
+       data = data.squeeze(3)
+       x = self.csnet_block(data)           
+       x = x.unsqueeze(1)
+       x = self.out(x)
+       return x
+    
 class CSNetBlock(nn.Module):
     def __init__(self, in_ch: int = 46, num_classes: int = None, reshape_len = 0):
         super().__init__()
@@ -319,7 +341,8 @@ class ConvolutionBlock(nn.Module):
         self.max_pool = nn.MaxPool1d(kernel_size=k, stride=2,padding=1)
        
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:         
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        #print("x shape", x.shape)         
         for sub_block in self.conv_sub_blocks:
             #print("iter")
             x = sub_block(x)
@@ -398,7 +421,7 @@ class ReshapeBlock(nn.Module):
     def __init__(self, channels = 32, length = 450 ):
         super(ReshapeBlock, self).__init__()        
         self.fc = nn.Linear(in_features=channels*length, out_features=80)  
-        self.decode = nn.Linear(in_features=80, out_features=1800)  
+        self.decode = nn.Linear(in_features=80, out_features=900)  
 
     def forward(self, x):        
         x = torch.flatten(x, start_dim=1)
