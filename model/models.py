@@ -280,9 +280,31 @@ class CSNetWithSensorFusion(nn.Module):
        x = x.unsqueeze(1)
        x = self.out(x)
        return x
+
+class CSNetIndividualModelForDecision(nn.Module):
+    def __init__(self, in_ch: int = 46, reshape_len=113, out_features=900,  num_classes: int = None):
+        super().__init__()
+        if num_classes is None:
+            num_classes = len(OPENPACK_OPERATIONS)
+        
+        self.csnet_block = CSNetBlock(in_ch=in_ch,num_classes=num_classes, reshape_len=reshape_len, out_features=out_features)       
+        self.out = nn.Conv1d(
+            1,
+            num_classes,
+            10,
+            stride=1,
+            padding="same",
+        )
+        
+
+    def forward(self, data) -> torch.Tensor: 
+       x = self.csnet_block(data)           
+       x = x.unsqueeze(1)
+       x = self.out(x)
+       return x
     
 class CSNetBlock(nn.Module):
-    def __init__(self, in_ch: int = 46, num_classes: int = None, reshape_len = 0):
+    def __init__(self, in_ch: int = 46, num_classes: int = None, reshape_len = 0, out_features=900):
         super().__init__()
         if num_classes is None:
             num_classes = len(OPENPACK_OPERATIONS)
@@ -293,7 +315,7 @@ class CSNetBlock(nn.Module):
         self.attn2 = SelfAttentionBlock()
         self.conv2 = ConvolutionBlock(in_ch=32)
         self.maxpool = nn.MaxPool1d(kernel_size=1, stride=2)
-        self.reshape = ReshapeBlock(length=reshape_len)
+        self.reshape = ReshapeBlock(length=reshape_len,out_features=out_features)
         """ self.out = nn.Conv1d(
             64,
             num_classes,
@@ -418,10 +440,10 @@ class FusionResultsWithConv(nn.Module):
         return fused_output
     
 class ReshapeBlock(nn.Module):
-    def __init__(self, channels = 32, length = 450 ):
+    def __init__(self, channels = 32, length = 450, out_features= 900 ):
         super(ReshapeBlock, self).__init__()        
         self.fc = nn.Linear(in_features=channels*length, out_features=80)  
-        self.decode = nn.Linear(in_features=80, out_features=900)  
+        self.decode = nn.Linear(in_features=80, out_features=out_features)  
 
     def forward(self, x):        
         x = torch.flatten(x, start_dim=1)

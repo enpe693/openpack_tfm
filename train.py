@@ -1,8 +1,8 @@
 from logging import getLogger
 from pathlib import Path
 from typing import Dict, Optional
-from utils.datamodule import OpenPackAllDataModule, OpenPackAllSplitDataModule, OpenPackSensorFusionDataModule, OpenPackSensorFusionWithKeypointsDataModule
-from model.lightning_module import MyModelLM, SplitDataModelLM, SensorFusionModelLM
+from utils.datamodule import *
+from model.lightning_module import *
 
 import hydra
 import numpy as np
@@ -19,7 +19,7 @@ from openpack_toolkit.codalab.operation_segmentation import (
     make_submission_zipfile)
 
 logger = getLogger(__name__)
-tensorboard_logger = TensorBoardLogger("tb_logs", name="sensor_fusion_keypoints2")
+tensorboard_logger = TensorBoardLogger("tb_logs", name="individual_imu_train")
 optorch.configs.register_configs()
 optorch.utils.reset_seed()
 
@@ -48,8 +48,8 @@ def train(cfg: DictConfig):
     optk.utils.io.cleanup_dir(logdir, exclude="hydra")
 
     #datamodule = OpenPackAllDataModule(cfg)
-    datamodule = OpenPackSensorFusionWithKeypointsDataModule(cfg)
-    plmodel = SensorFusionModelLM(cfg)
+    datamodule = OpenPackAllSplitDataModule(cfg)
+    plmodel = IndividualModelForDecisionLM("imu",cfg)
     #plmodel = SplitDataModelLM(cfg)
     plmodel.to(dtype=torch.float, device=device)
     logger.info(plmodel)
@@ -90,7 +90,7 @@ def test(cfg: DictConfig, mode: str = "test"):
     logdir = Path(cfg.path.logdir.rootdir)
 
     #datamodule = OpenPackAllDataModule(cfg)
-    datamodule = OpenPackSensorFusionWithKeypointsDataModule(cfg)
+    datamodule = OpenPackAllSplitDataModule(cfg)
     datamodule.setup(mode)
 
     if (not cfg.model_path):
@@ -99,7 +99,7 @@ def test(cfg: DictConfig, mode: str = "test"):
         ckpt_path = Path(cfg.model_path, "last.ckpt")
     logger.info(f"load checkpoint from {ckpt_path}")
     #plmodel = MyModelLM.load_from_checkpoint(ckpt_path, cfg=cfg)
-    plmodel = SensorFusionModelLM.load_from_checkpoint(ckpt_path, cfg=cfg)
+    plmodel = IndividualModelForDecisionLM.load_from_checkpoint(ckpt_path, cfg=cfg)
     plmodel.to(dtype=torch.float, device=device)
 
     trainer = pl.Trainer(
