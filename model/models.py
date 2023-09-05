@@ -450,3 +450,51 @@ class ReshapeBlock(nn.Module):
         x = self.fc(x)
         x = self.decode(x)        
         return x
+    
+
+class FusionOfIndividualModels(nn.Module):
+    def __init__(self, imu_model= None, keypoints_model= None, e4_model= None, num_classes: int = None):
+        super().__init__()
+        if num_classes is None:
+            num_classes = len(OPENPACK_OPERATIONS)
+        
+        self.imu_model = imu_model
+        self.keypoints_model = keypoints_model  
+        self.e4_model = e4_model 
+        #self.linear = nn.Linear(3 * 11, 11)   
+        self.out = nn.Conv2d(
+            in_channels=3,
+            out_channels=num_classes,
+            kernel_size=(11, 1),
+            stride=(1,1),
+            padding=(0,0),
+        )
+        
+
+    def forward(self, data) -> torch.Tensor: 
+       imu = data[0]
+       keypoints = data[1]
+       e4 = data[2]
+       imu = self.imu_model(imu)
+       keypoints = self.keypoints_model(keypoints)
+       e4 = self.e4_model(e4)
+
+       desired_size = imu.shape
+       scale_factor_kp = desired_size[2] / keypoints.shape[2]
+       scale_factor_e4 = desired_size[2] / e4.shape[2]      
+
+
+       upsampler_kp = nn.Upsample(size=1800, mode='linear', align_corners=False)
+       upsampled_kp = upsampler_kp(keypoints)
+       upsampler_e4 = nn.Upsample(size=1800, mode='linear', align_corners=False)
+       upsampled_e4 = upsampler_e4(e4)
+
+       x = torch.stack([imu, upsampled_kp, upsampled_e4], dim=0)
+       #x = x.transpose(0, 1).reshape(1800, 3 * 11)
+       x = x.permute(1,0,2,3)
+       print(f"x permutation shape {x.shape}")
+       x = self.out(x)
+       x = x.squeeze(2)
+       print(f"x shape {x.shape}")
+
+       return x

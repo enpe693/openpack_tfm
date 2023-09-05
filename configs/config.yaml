@@ -3,7 +3,7 @@ defaults:
   - override hydra/job_logging: none
   - _self_
 datarootdir: C:\Users\Ego\Documents\TFM\dataset\openpack\v0.3.1
-issue: "imu"
+issue: "fusion_all_models"
 hydra:
   run:
     dir: ${path.logdir.rootdir}
@@ -11,10 +11,10 @@ hydra:
     chdir: true
 debug: true
 model_path: ""
-model_type: "imu"
+model_type: "fusion_all_models"
 mode: "test"
 model:
-  name: CSNetIndividualModelForDecision
+  name: FusionOfIndividualModels
 device: [0]
 train:
   num_workers: 3

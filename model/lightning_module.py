@@ -263,6 +263,88 @@ class IndividualModelForDecisionLM(optorch.lightning.BaseLightningModule):
 
         outputs = dict(t=t, y=y_hat,unixtime=ts)
         return outputs
+    
+class FusionOfModelsLM(optorch.lightning.BaseLightningModule):
+
+    def __init__(self, imu_model=None, keypoints_model=None, e4_model=None, cfg: DictConfig = None) -> None:        
+        super().__init__(cfg)
+        self.net.imu_model = imu_model 
+        self.net.keypoints_model = keypoints_model
+        self.net.e4_model = e4_model        
+        self.freeze_params()              
+        
+
+
+    def init_model(self, cfg: DictConfig) -> torch.nn.Module:                      
+        model = FusionOfIndividualModels()
+        return model
+    
+    
+    def init_criterion(self, cfg: DictConfig):
+        """Initialize loss function
+        """
+        ignore_cls = [(i, c) for i, c in enumerate(cfg.dataset.classes.classes) if c.is_ignore]
+        
+        criterion = torch.nn.CrossEntropyLoss(
+            ignore_index=ignore_cls[-1][0]
+        )
+        return criterion
+    
+    def freeze_params(self):
+        for param in self.net.e4_model.parameters():
+            param.requires_grad = False
+        for param in self.net.keypoints_model.parameters():
+            param.requires_grad = False
+        for param in self.net.imu_model.parameters():
+            param.requires_grad = False
+
+    def training_step(self, batch: Dict, batch_idx: int) -> Dict:
+        """Definition of training loop. Get mini-batch and return loss.
+        """
+        x_imu = batch["x_imu"].to(device=self.device, dtype=torch.float)
+        x_keypoints = batch["x_keypoints"].to(device=self.device, dtype=torch.float)    
+        x_e4 = batch["x_e4"].to(device=self.device, dtype=torch.float)            
+        t = batch["label_imu"].to(device=self.device, dtype=torch.long)
+
+        #print("Input imu size:", x_imu.shape)
+        #print("Input kp size:", x_keypoints.shape)
+        #print("Input e4 size:", x_e4.shape)
+        #print("Input labels size:", t.shape)
+        #print("Output tensor size:", y_hat.shape)
+        #print("Size of tensor after layer 1:", self.conv.weight.shape)
+        #print("Size of tensor after layer 2:", self.lstm.weight.shape)
+        #print("Size of tensor after layer 3:", self.attention.weight.shape)
+
+        y_hat = self([x_imu, x_keypoints, x_e4])
+        #print("y_hat shape:", y_hat.shape)
+
+        loss = self.criterion(y_hat, t)
+        acc = self.calc_accuracy(y_hat, t)     
+
+        self.log("train_loss",loss, on_epoch=True, on_step=False)
+        self.log("train_acc",acc, on_epoch=True, on_step=False)   
+
+        return {"loss": loss, "acc": acc}  
+
+
+    def test_step(self, batch: Dict, batch_idx: int) -> Dict:
+        """Definition of inference step. Get mini-batch and return model outputs.
+        """
+        x_imu = batch["x_imu"].to(device=self.device, dtype=torch.float)
+        x_keypoints = batch["x_keypoints"].to(device=self.device, dtype=torch.float)    
+        x_e4 = batch["x_e4"].to(device=self.device, dtype=torch.float)            
+        t = batch["label_imu"].to(device=self.device, dtype=torch.long)
+        ts = batch["times_imu"]
+
+        y_hat = self([x_imu, x_keypoints, x_e4])
+        #print("y_hat shape:", y_hat.shape)
+
+        loss = self.criterion(y_hat, t)
+        acc = self.calc_accuracy(y_hat, t)     
+
+        outputs = dict(t=t, y=y_hat,unixtime=ts)
+        return outputs
+
 
 def get_parameters_by_type(model_type):
     if (model_type == "imu"):
