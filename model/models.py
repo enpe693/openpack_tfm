@@ -498,3 +498,124 @@ class FusionOfIndividualModels(nn.Module):
        print(f"x shape {x.shape}")
 
        return x
+    
+
+class MyDeepConvLstm(nn.Module):
+    def __init__(self, in_ch: int = 46, num_classes: int = None):
+        super().__init__()
+        if num_classes is None:
+            num_classes = len(OPENPACK_OPERATIONS)
+
+        # -- [1] CNN --
+        # *** Edit Here ***
+        num_conv_layers = 2 # convolutional layers (Default: 4)
+        num_conv_filter = 64 # convolutional filters (Default: 64)
+        ks = 5 # kernel size, 
+        # ******************
+        
+        blocks = []
+        for i in range(num_conv_layers):
+            in_ch_ = in_ch if i == 0 else 64
+            blocks.append(
+                nn.Sequential(
+                    nn.Conv1d(in_ch_, 64, kernel_size=5, padding="same"),
+                    nn.BatchNorm1d(64),
+                    nn.ReLU(),
+                )
+            )
+        self.branch1 = ConvolutionBranch(in_ch=in_ch, num_filters=num_conv_filter,k=1)
+        self.branch2 = ConvolutionBranch(in_ch=in_ch, num_filters=num_conv_filter,k=5)
+        self.branch3 = ConvolutionBranch(in_ch=in_ch, num_filters=num_conv_filter,k=10)
+
+        # -- [2] LSTM --
+        # *** Edit Here ***        
+        hidden_units = 128 # number of hidden units for Bi-LSTM
+        # ******************
+        
+        # NOTE: enable ``bidirectional``
+        self.lstm6 = nn.LSTM(num_conv_filter*3, hidden_units, batch_first=True, bidirectional=True)
+        self.lstm7 = nn.LSTM(hidden_units*2, hidden_units, batch_first=True,  bidirectional=True)
+        self.dropout6 = nn.Dropout(p=0.5)
+        self.dropout7 = nn.Dropout(p=0.5)
+
+        # -- [3] Output --
+        self.out8 = nn.Conv1d(
+            hidden_units * 2,
+            num_classes,
+            1,
+            stride=1,
+            padding=0,
+        )
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """
+        Args:
+            x (torch.Tensor): shape = (B, CH, T, 1)
+        Returns:
+            torch.Tensor: shape = (B, N_CLASSES, T, 1)
+        """
+        # -- [1] Conv --
+        x_branch1 = self.branch1(x)
+        x_branch2 = self.branch2(x)
+        x_branch3 = self.branch3(x)
+
+        # -- [2] LSTM --
+        # Reshape: (B, CH, 1, T) -> (B, T, CH)
+        print(f"x 0 shape {x_branch1.shape}")
+        x = torch.cat((x_branch1, x_branch2, x_branch3), dim=1)
+        print(f"x shape {x.shape}")
+        x = x.permute(0,2,1)
+        #x = x.squeeze(3).transpose(1, 2)
+
+        x, _ = self.lstm6(x)
+        x = self.dropout6(x)
+        x, _ = self.lstm7(x)
+        x = self.dropout7(x)
+
+        # Reshape: (B, T, CH) -> (B, CH, T, 1)
+        x = x.transpose(1, 2)
+        
+        # -- [3] Output --
+        x = self.out8(x)
+        return x
+
+class ConvolutionBranch(nn.Module):
+    def __init__(self, in_ch: int = 12, num_layers: int = 2, k: int = 1, num_filters = 32):
+        super().__init__()        
+
+        blocks = []
+        for i in range(num_layers):
+            in_ch_ = in_ch if i == 0 else num_filters
+            blocks.append(
+                nn.Sequential(
+                    nn.Conv1d(in_ch_, num_filters, kernel_size=k, padding='same'),
+                    nn.BatchNorm1d(num_filters),
+                    nn.ReLU(),
+                )
+            )
+        self.conv_sub_blocks = nn.ModuleList(blocks)
+       
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        #print("x shape", x.shape)         
+        for sub_block in self.conv_sub_blocks:
+            #print("iter")
+            x = sub_block(x)
+        #print("x shape", x.shape)
+        return x
+
+def get_conv_block_by_kernel(num_conv_layers=2, k = 1, in_ch = 12):
+    blocks = []
+    for i in range(num_conv_layers):
+        in_ch_ = in_ch if i == 0 else 64
+        blocks.append(
+            nn.Sequential(
+            nn.Conv1d(in_ch_, 64, kernel_size=k, padding="same"),
+            nn.BatchNorm1d(64),
+              nn.ReLU(),
+              )
+        )
+    return blocks
+    
+
+        

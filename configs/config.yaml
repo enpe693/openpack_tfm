@@ -3,7 +3,7 @@ defaults:
   - override hydra/job_logging: none
   - _self_
 datarootdir: C:\Users\Ego\Documents\TFM\dataset\openpack\v0.3.1
-issue: "fusion_all_models"
+issue: "train_e4"
 hydra:
   run:
     dir: ${path.logdir.rootdir}
@@ -11,15 +11,15 @@ hydra:
     chdir: true
 debug: true
 model_path: ""
-model_type: "fusion_all_models"
+model_type: "e4"
 mode: "test"
 model:
-  name: FusionOfIndividualModels
+  name: MyDeepConvLstm
 device: [0]
 train:
   num_workers: 3
   batch_size: 32
-  epochs: 100
+  epochs: 50
   window: 1800 # 30Hz * 60s
   optimizer:
     type: "Adam"

@@ -19,7 +19,7 @@ from openpack_toolkit.codalab.operation_segmentation import (
     make_submission_zipfile)
 
 logger = getLogger(__name__)
-tensorboard_logger = TensorBoardLogger("tb_logs", name="new_keypoints")
+tensorboard_logger = TensorBoardLogger("tb_logs", name="e4_deepconvlstm")
 optorch.configs.register_configs()
 optorch.utils.reset_seed()
 
@@ -49,7 +49,7 @@ def train(cfg: DictConfig):
 
     #datamodule = OpenPackAllDataModule(cfg)
     datamodule = OpenPackAllSplitDataModule(cfg)
-    plmodel = IndividualModelForDecisionLM("keypoints",cfg)
+    plmodel = MyDeepConvLSTMLM("e4",cfg)
     #plmodel = SplitDataModelLM(cfg)
     plmodel.to(dtype=torch.float, device=device)
     logger.info(plmodel)
@@ -99,7 +99,7 @@ def test(cfg: DictConfig, mode: str = "test"):
         ckpt_path = Path(cfg.model_path, "last.ckpt")
     logger.info(f"load checkpoint from {ckpt_path}")
     #plmodel = MyModelLM.load_from_checkpoint(ckpt_path, cfg=cfg)
-    plmodel = IndividualModelForDecisionLM.load_from_checkpoint(ckpt_path, cfg=cfg)
+    plmodel = MyDeepConvLSTMLM.load_from_checkpoint(ckpt_path, cfg=cfg)
     plmodel.to(dtype=torch.float, device=device)
 
     trainer = pl.Trainer(
