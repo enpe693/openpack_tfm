@@ -19,7 +19,7 @@ from openpack_toolkit.codalab.operation_segmentation import (
     make_submission_zipfile)
 
 logger = getLogger(__name__)
-tensorboard_logger = TensorBoardLogger("tb_logs", name="e4_deepconvlstm")
+tensorboard_logger = TensorBoardLogger("tb_logs", name="keypoints_100")
 optorch.configs.register_configs()
 optorch.utils.reset_seed()
 
@@ -49,7 +49,7 @@ def train(cfg: DictConfig):
 
     #datamodule = OpenPackAllDataModule(cfg)
     datamodule = OpenPackAllSplitDataModule(cfg)
-    plmodel = MyDeepConvLSTMLM("e4",cfg)
+    plmodel = MyDeepConvLSTMLM("keypoints",cfg)
     #plmodel = SplitDataModelLM(cfg)
     plmodel.to(dtype=torch.float, device=device)
     logger.info(plmodel)
