@@ -19,7 +19,7 @@ from openpack_toolkit.codalab.operation_segmentation import (
     make_submission_zipfile)
 
 logger = getLogger(__name__)
-tensorboard_logger = TensorBoardLogger("tb_logs", name="keypoints_100")
+tensorboard_logger = TensorBoardLogger("tb_logs", name="fusion_all_models_train")
 optorch.configs.register_configs()
 optorch.utils.reset_seed()
 
@@ -47,9 +47,25 @@ def train(cfg: DictConfig):
     logger.debug(f"logdir = {logdir}")
     optk.utils.io.cleanup_dir(logdir, exclude="hydra")
 
+
+    e4_path = "C:\\Users\\Ego\\Documents\\TFM\\dataset\\openpack\\v0.3.1\\log\\all-devices-dataset\\CSNetIndividualModelForDecision\\e4\\tb_logs\\individual_e4_train\\version_0\\checkpoints"
+    imu_path = "C:\\Users\\Ego\\Documents\\TFM\\dataset\\openpack\\v0.3.1\\log\\all-devices-dataset\\CSNetIndividualModelForDecision\\imu\\tb_logs\\individual_imu_train\\version_0\\checkpoints"
+    keypoints_path = "C:\\Users\\Ego\\Documents\\TFM\\dataset\\openpack\\v0.3.1\\log\\all-devices-dataset\\CSNetIndividualModelForDecision\\keypoints\\tb_logs\\individual_keypoints_train\\version_0\\checkpoints"
+
+    e4_path = Path(e4_path, "last.ckpt")
+    imu_path = Path(imu_path, "last.ckpt")
+    keypoints_path = Path(keypoints_path, "last.ckpt")
+
+    cfg.model_type ="e4"
+    e4_model = IndividualModelForDecisionLM.load_from_checkpoint(e4_path, cfg=cfg)
+    cfg.model_type ="imu"
+    imu_model = IndividualModelForDecisionLM.load_from_checkpoint(imu_path, cfg=cfg)
+    cfg.model_type ="keypoints"
+    keypoints_model = IndividualModelForDecisionLM.load_from_checkpoint(keypoints_path, cfg=cfg)
+
     #datamodule = OpenPackAllDataModule(cfg)
     datamodule = OpenPackAllSplitDataModule(cfg)
-    plmodel = MyDeepConvLSTMLM("keypoints",cfg)
+    plmodel = FusionOfModelsLM(keypoints_model=keypoints_model, imu_model=imu_model, e4_model=e4_model,cfg=cfg)
     #plmodel = SplitDataModelLM(cfg)
     plmodel.to(dtype=torch.float, device=device)
     logger.info(plmodel)
@@ -98,8 +114,23 @@ def test(cfg: DictConfig, mode: str = "test"):
     else:
         ckpt_path = Path(cfg.model_path, "last.ckpt")
     logger.info(f"load checkpoint from {ckpt_path}")
-    #plmodel = MyModelLM.load_from_checkpoint(ckpt_path, cfg=cfg)
-    plmodel = MyDeepConvLSTMLM.load_from_checkpoint(ckpt_path, cfg=cfg)
+    
+    e4_path = "C:\\Users\\Ego\\Documents\\TFM\\dataset\\openpack\\v0.3.1\\log\\all-devices-dataset\\CSNetIndividualModelForDecision\\e4\\tb_logs\\individual_e4_train\\version_0\\checkpoints"
+    imu_path = "C:\\Users\\Ego\\Documents\\TFM\\dataset\\openpack\\v0.3.1\\log\\all-devices-dataset\\CSNetIndividualModelForDecision\\imu\\tb_logs\\individual_imu_train\\version_0\\checkpoints"
+    keypoints_path = "C:\\Users\\Ego\\Documents\\TFM\\dataset\\openpack\\v0.3.1\\log\\all-devices-dataset\\CSNetIndividualModelForDecision\\keypoints\\tb_logs\\individual_keypoints_train\\version_0\\checkpoints"
+
+    e4_path = Path(e4_path, "last.ckpt")
+    imu_path = Path(imu_path, "last.ckpt")
+    keypoints_path = Path(keypoints_path, "last.ckpt")
+
+    cfg.model_type ="e4"
+    e4_model = IndividualModelForDecisionLM.load_from_checkpoint(e4_path, cfg=cfg)
+    cfg.model_type ="imu"
+    imu_model = IndividualModelForDecisionLM.load_from_checkpoint(imu_path, cfg=cfg)
+    cfg.model_type ="keypoints"
+    keypoints_model = IndividualModelForDecisionLM.load_from_checkpoint(keypoints_path, cfg=cfg)
+
+    plmodel = FusionOfModelsLM.load_from_checkpoint(ckpt_path, cfg=cfg, keypoints_model=keypoints_model, imu_model=imu_model, e4_model=e4_model )
     plmodel.to(dtype=torch.float, device=device)
 
     trainer = pl.Trainer(
@@ -171,7 +202,7 @@ def test(cfg: DictConfig, mode: str = "test"):
         make_submission_zipfile(submission_dict, logdir, metadata=metadata)
 
 
-@ hydra.main(version_base=None, config_path="./configs",
+@ hydra.main(version_base=None, config_path="configs",
              config_name="config.yaml")
 def main(cfg: DictConfig):
     # DEBUG

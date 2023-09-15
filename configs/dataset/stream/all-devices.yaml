@@ -47,3 +47,11 @@ nodes: {
 keypoint_dim: 34
 min_value_keypoint: 0
 max_value_keypoint: 1280
+
+path_e4:
+  dir: "${path.openpack.rootdir}/${user.name}/e4/${device}/acc"
+  fname: "${session}.csv"
+frame_rate_e4: 32
+devices_e4:
+  - 'e401'
+  - 'e402'
