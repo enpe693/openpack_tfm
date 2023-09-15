@@ -462,12 +462,14 @@ class FusionOfIndividualModels(nn.Module):
         self.keypoints_model = keypoints_model  
         self.e4_model = e4_model 
         #self.linear = nn.Linear(3 * 11, 11)   
-        self.out = nn.Conv2d(
-            in_channels=3,
-            out_channels=num_classes,
-            kernel_size=(11, 1),
-            stride=(1,1),
-            padding=(0,0),
+        #self.out = nn.Conv2d(in_channels=3, out_channels=num_classes, kernel_size=(11, 1), stride=(1,1), padding=(0,0),)
+
+        self.out = nn.Conv1d(
+            33,
+            num_classes,
+            2,
+            stride=1,
+            padding="same",
         )
         
 
@@ -484,17 +486,20 @@ class FusionOfIndividualModels(nn.Module):
        scale_factor_e4 = desired_size[2] / e4.shape[2]      
 
 
-       upsampler_kp = nn.Upsample(size=1800, mode='linear', align_corners=False)
+       upsampler_kp = nn.Upsample(size=1920, mode='linear', align_corners=False)
        upsampled_kp = upsampler_kp(keypoints)
-       upsampler_e4 = nn.Upsample(size=1800, mode='linear', align_corners=False)
-       upsampled_e4 = upsampler_e4(e4)
+       upsampler_imu = nn.Upsample(size=1920, mode='linear', align_corners=False)
+       upsampled_imu = upsampler_imu(imu)
+       #upsampler_e4 = nn.Upsample(size=1800, mode='linear', align_corners=False)
+       #upsampled_e4 = upsampler_e4(e4)
 
-       x = torch.stack([imu, upsampled_kp, upsampled_e4], dim=0)
+       x = torch.stack([upsampled_imu, upsampled_kp, e4], dim=0)
        #x = x.transpose(0, 1).reshape(1800, 3 * 11)
        x = x.permute(1,0,2,3)
+       x = x.reshape(-1,33,1920)
        print(f"x permutation shape {x.shape}")
        x = self.out(x)
-       x = x.squeeze(2)
+       #x = x.squeeze(2)
        print(f"x shape {x.shape}")
 
        return x

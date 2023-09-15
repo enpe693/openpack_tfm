@@ -304,7 +304,7 @@ class FusionOfModelsLM(optorch.lightning.BaseLightningModule):
         x_imu = batch["x_imu"].to(device=self.device, dtype=torch.float)
         x_keypoints = batch["x_keypoints"].to(device=self.device, dtype=torch.float)    
         x_e4 = batch["x_e4"].to(device=self.device, dtype=torch.float)            
-        t = batch["label_imu"].to(device=self.device, dtype=torch.long)
+        t = batch["label_e4"].to(device=self.device, dtype=torch.long)
 
         #print("Input imu size:", x_imu.shape)
         #print("Input kp size:", x_keypoints.shape)
@@ -333,8 +333,8 @@ class FusionOfModelsLM(optorch.lightning.BaseLightningModule):
         x_imu = batch["x_imu"].to(device=self.device, dtype=torch.float)
         x_keypoints = batch["x_keypoints"].to(device=self.device, dtype=torch.float)    
         x_e4 = batch["x_e4"].to(device=self.device, dtype=torch.float)            
-        t = batch["label_imu"].to(device=self.device, dtype=torch.long)
-        ts = batch["times_imu"]
+        t = batch["label_e4"].to(device=self.device, dtype=torch.long)
+        ts = batch["times_e4"]
 
         y_hat = self([x_imu, x_keypoints, x_e4])
         #print("y_hat shape:", y_hat.shape)
