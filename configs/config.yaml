@@ -3,7 +3,7 @@ defaults:
   - override hydra/job_logging: none
   - _self_
 datarootdir: C:\Users\Ego\Documents\TFM\dataset\openpack\v0.3.1
-issue: "keypoints"
+issue: "imu_good_1"
 hydra:
   run:
     dir: ${path.logdir.rootdir}
@@ -11,10 +11,10 @@ hydra:
     chdir: true
 debug: true
 model_path: ""
-model_type: "keypoints"
+model_type: "imu"
 mode: "test"
 model:
-  name: MyDeepConvLstm
+  name: MyDeepConvLSTMLM
 device: [0]
 train:
   num_workers: 3

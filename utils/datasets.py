@@ -444,8 +444,10 @@ class OpenPackAllSplit(torch.utils.data.Dataset):
                     cfg.dataset.stream.path_e4.fname
                 )
                 paths_e4.append(path_e4)
-            
-            ts_sess_e4, x_sess_e4 = load_e4acc(paths_e4)
+            if ((user == "U0203" and session == "S0300") or (user == "U0203" and session == "S0400")):
+                ts_sess_e4, x_sess_e4 = None, None
+            else:
+                ts_sess_e4, x_sess_e4 = load_e4acc(paths_e4)
 
             path = Path(
                     cfg.dataset.annotation.path.dir,
@@ -458,6 +460,7 @@ class OpenPackAllSplit(torch.utils.data.Dataset):
             
             df_label_keypoints = optk.data.load_and_resample_operation_labels(path, ts_sess_keypoints, classes=self.classes)
             labels_keypoints = df_label_keypoints["act_idx"].values
+
 
             if (ts_sess_e4 is None):
                 print("E4 error")
