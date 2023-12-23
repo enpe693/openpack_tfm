@@ -2,7 +2,7 @@ from typing import List, Tuple, Union
 from pathlib import Path
 import numpy as np
 import pandas as pd
-
+# adapted from openpack_toolkit/data
 def load_e4acc(
     paths: Union[Tuple[Path, ...], List[Path]],
     th: int = 30,

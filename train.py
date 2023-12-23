@@ -25,6 +25,9 @@ optorch.utils.reset_seed()
 
 
 def save_training_results(log: Dict, logdir: Path) -> None:
+    """
+    Created from the code in https://github.com/open-pack/openpack-torch/tree/main/examples
+    """
     # -- Save Model Outputs --
     df = pd.concat(
         [
@@ -65,9 +68,9 @@ def train(cfg: DictConfig):
     trainer = pl.Trainer(
         gpus=[0],
         max_epochs=num_epoch,
-        logger=tensorboard_logger,  # disable logging module
+        logger=tensorboard_logger,  
         default_root_dir=logdir,
-        enable_progress_bar=False,  # disable progress bar
+        enable_progress_bar=False,  
         enable_checkpointing=True,
         callbacks=[checkpoint_callback],
     )

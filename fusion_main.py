@@ -25,6 +25,9 @@ optorch.utils.reset_seed()
 
 
 def save_training_results(log: Dict, logdir: Path) -> None:
+    """
+    Created from the code in https://github.com/open-pack/openpack-torch/tree/main/examples
+    """
     # -- Save Model Outputs --
     df = pd.concat(
         [
@@ -48,9 +51,10 @@ def train(cfg: DictConfig):
     optk.utils.io.cleanup_dir(logdir, exclude="hydra")
 
 
-    imu_path = "C:\\Users\\Ego\\Documents\\TFM\\dataset\\openpack\\v0.3.1\\log\\all-devices-dataset\\MyDeepConvLSTMLM\\MyDeepConvLSTMLM_imu_all\\tb_logs\\imu_all\\version_0\\checkpoints"
-    e4_path = "C:\\Users\\Ego\\Documents\\TFM\\dataset\\openpack\\v0.3.1\\log\\all-devices-dataset\\MyDeepConvLstm\\train_e4_100\\tb_logs\\e4_deepconvlstm_100\\version_0\\checkpoints"
-    keypoints_path = "C:\\Users\\Ego\\Documents\\TFM\\dataset\\openpack\\v0.3.1\\log\\all-devices-dataset\\MyDeepConvLstm\\keypoints\\tb_logs\\keypoints_100\\version_0\\checkpoints"
+    #Change to your local directory
+    imu_path = "...\\MyDeepConvLSTMLM\\MyDeepConvLSTMLM_imu_all\\tb_logs\\imu_all\\version_0\\checkpoints"
+    e4_path = "...\\MyDeepConvLstm\\train_e4_100\\tb_logs\\e4_deepconvlstm_100\\version_0\\checkpoints"
+    keypoints_path = "...\\MyDeepConvLstm\\keypoints\\tb_logs\\keypoints_100\\version_0\\checkpoints"
 
     e4_path = Path(e4_path, "last.ckpt")
     imu_path = Path(imu_path, "last.ckpt")
@@ -81,9 +85,9 @@ def train(cfg: DictConfig):
     trainer = pl.Trainer(
         gpus=[0],
         max_epochs=num_epoch,
-        logger=tensorboard_logger,  # disable logging module
+        logger=tensorboard_logger,  
         default_root_dir=logdir,
-        enable_progress_bar=False,  # disable progress bar
+        enable_progress_bar=False,  
         enable_checkpointing=True,
         callbacks=[checkpoint_callback],
     )
@@ -99,6 +103,9 @@ def train(cfg: DictConfig):
     logger.debug(f"logdir = {logdir}")
 
 def test(cfg: DictConfig, mode: str = "test"):
+     """
+    Created from the code in https://github.com/open-pack/openpack-torch/tree/main/examples
+    """
     assert mode in ("test", "submission", "test-on-submission")
     logger.debug(f"test() function is called with mode={mode}.")
 
@@ -115,9 +122,10 @@ def test(cfg: DictConfig, mode: str = "test"):
         ckpt_path = Path(cfg.model_path, "last.ckpt")
     logger.info(f"load checkpoint from {ckpt_path}")
     
-    imu_path = "C:\\Users\\Ego\\Documents\\TFM\\dataset\\openpack\\v0.3.1\\log\\all-devices-dataset\\MyDeepConvLSTMLM\\MyDeepConvLSTMLM_imu_all\\tb_logs\\imu_all\\version_0\\checkpoints"
-    e4_path = "C:\\Users\\Ego\\Documents\\TFM\\dataset\\openpack\\v0.3.1\\log\\all-devices-dataset\\MyDeepConvLstm\\train_e4_100\\tb_logs\\e4_deepconvlstm_100\\version_0\\checkpoints"
-    keypoints_path = "C:\\Users\\Ego\\Documents\\TFM\\dataset\\openpack\\v0.3.1\\log\\all-devices-dataset\\MyDeepConvLstm\\keypoints\\tb_logs\\keypoints_100\\version_0\\checkpoints"
+    #Change to your local directory
+    imu_path = "...\\MyDeepConvLSTMLM\\MyDeepConvLSTMLM_imu_all\\tb_logs\\imu_all\\version_0\\checkpoints"
+    e4_path = "...\\MyDeepConvLstm\\train_e4_100\\tb_logs\\e4_deepconvlstm_100\\version_0\\checkpoints"
+    keypoints_path = "...\\MyDeepConvLstm\\keypoints\\tb_logs\\keypoints_100\\version_0\\checkpoints"
 
     e4_path = Path(e4_path, "last.ckpt")
     imu_path = Path(imu_path, "last.ckpt")
@@ -135,10 +143,10 @@ def test(cfg: DictConfig, mode: str = "test"):
 
     trainer = pl.Trainer(
         gpus=[0],
-        logger=False,  # disable logging module
+        logger=False,  
         default_root_dir=None,
-        enable_progress_bar=False,  # disable progress bar
-        enable_checkpointing=False,  # does not save model check points
+        enable_progress_bar=False,  
+        enable_checkpointing=False,  
     )
 
     if mode == "test":
