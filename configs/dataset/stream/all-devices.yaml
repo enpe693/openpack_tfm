@@ -8,10 +8,8 @@ frame_rate_imu: 30
 devices:
   - 'atr01'
   - 'atr02'
-  - 'atr03'
-  - 'atr04'
 acc: True
-gyro: False
+gyro: True
 quat: False
 imu_dim: 12
 min_value_imu_acc: -4

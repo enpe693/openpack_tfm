@@ -467,7 +467,7 @@ class FusionOfIndividualModels(nn.Module):
         self.out = nn.Conv1d(
             33,
             num_classes,
-            2,
+            1,
             stride=1,
             padding="same",
         )
@@ -486,17 +486,17 @@ class FusionOfIndividualModels(nn.Module):
        scale_factor_e4 = desired_size[2] / e4.shape[2]      
 
 
-       upsampler_kp = nn.Upsample(size=1920, mode='linear', align_corners=False)
+       upsampler_kp = nn.Upsample(size=1800, mode='linear', align_corners=False)
        upsampled_kp = upsampler_kp(keypoints)
-       upsampler_imu = nn.Upsample(size=1920, mode='linear', align_corners=False)
-       upsampled_imu = upsampler_imu(imu)
-       #upsampler_e4 = nn.Upsample(size=1800, mode='linear', align_corners=False)
-       #upsampled_e4 = upsampler_e4(e4)
+       #upsampler_imu = nn.Upsample(size=1920, mode='linear', align_corners=False)
+       #upsampled_imu = upsampler_imu(imu)
+       upsampler_e4 = nn.Upsample(size=1800, mode='linear', align_corners=False)
+       upsampled_e4 = upsampler_e4(e4)
 
-       x = torch.stack([upsampled_imu, upsampled_kp, e4], dim=0)
+       x = torch.stack([imu, upsampled_kp, upsampled_e4], dim=0)
        #x = x.transpose(0, 1).reshape(1800, 3 * 11)
        x = x.permute(1,0,2,3)
-       x = x.reshape(-1,33,1920)
+       x = x.reshape(-1,33,1800)
        print(f"x permutation shape {x.shape}")
        x = self.out(x)
        #x = x.squeeze(2)

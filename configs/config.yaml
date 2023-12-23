@@ -3,7 +3,7 @@ defaults:
   - override hydra/job_logging: none
   - _self_
 datarootdir: C:\Users\Ego\Documents\TFM\dataset\openpack\v0.3.1
-issue: "MyDeepConvLSTMLM_1920"
+issue: "imu_good_1"
 hydra:
   run:
     dir: ${path.logdir.rootdir}
@@ -11,15 +11,15 @@ hydra:
     chdir: true
 debug: true
 model_path: ""
-model_type: "keypoints"
+model_type: "imu"
 mode: "test"
 model:
-  name: FusionOfModelsLM
+  name: MyDeepConvLSTMLM
 device: [0]
 train:
   num_workers: 3
   batch_size: 32
-  epochs: 25
+  epochs: 100
   window: 1800 # 30Hz * 60s
   optimizer:
     type: "Adam"
