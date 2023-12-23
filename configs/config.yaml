@@ -2,7 +2,7 @@ defaults:
   - dataset: all-devices
   - override hydra/job_logging: none
   - _self_
-datarootdir: C:\Users\Ego\Documents\TFM\dataset\openpack\v0.3.1
+datarootdir: C:\...\dataset\openpack\v0.3.1
 issue: "imu_good_1"
 hydra:
   run:
@@ -36,7 +36,7 @@ use_gyro: False
 path:
   openpack:
     version: v0.3.1
-    rootdir: C:\Users\Ego\Documents\TFM\dataset\openpack\v0.3.1
+    rootdir: C:\...\dataset\openpack\v0.3.1
   logdir:
     rootdir: ${datarootdir}/log/${dataset.name}/${model.name}/${issue}
     model: ${path.logdir.rootdir}/model.pth

@@ -1,4 +1,5 @@
 """Dataset Class for OpenPack dataset.
+    Adapted from openpack_torch/data/datasets.py
 """
 from logging import getLogger
 from pathlib import Path
@@ -119,13 +120,9 @@ class OpenPackAll(torch.utils.data.Dataset):
                     cfg.dataset.stream.path_keypoint.fname,
                 )
             ts_sess_keypoints, x_sess_keypoints = optk.data.load_keypoints(path_keypoints)
-            x_sess_keypoints = x_sess_keypoints[:(x_sess_keypoints.shape[0] - 1)]  # Remove prediction score.
-            #print("Shape of x keypoints:", x_sess_keypoints.shape)
-            #print("Shape of t keypoints:", ts_sess_keypoints.shape)
+            x_sess_keypoints = x_sess_keypoints[:(x_sess_keypoints.shape[0] - 1)]  # Remove prediction score.            
             
             x_sess_keypoints = x_sess_keypoints.transpose(2, 0, 1).reshape(34, -1).transpose(1,0)
-
-            #print("Shape of x keypoints:", x_sess_keypoints.shape)
 
             paths_imu = []
             for device in cfg.dataset.stream.devices:
@@ -146,18 +143,9 @@ class OpenPackAll(torch.utils.data.Dataset):
             
             x_sess_imu = x_sess_imu.transpose(1,0)
 
-            #print("Shape of x imu:", x_sess_imu.shape)
-            #print("Shape of t imu:", ts_sess_imu.shape)
-
-            #print("First t imu entries", ts_sess_imu)   
-            #print("First t keypoints entries", ts_sess_keypoints)   
-
-
             imu_pd = self.create_pd_from_data(x_sess_imu, ts_sess_imu)
             keypoints_pd = self.create_pd_from_data(x_sess_keypoints, ts_sess_keypoints)
-            merged_pd = self.merge_pds(imu_pd, keypoints_pd)
-            #print(merged_pd.shape)
-            #print(merged_pd.head())
+            merged_pd = self.merge_pds(imu_pd, keypoints_pd)           
 
             assert merged_pd.shape[0] == ts_sess_imu.shape[0], "DataFrame and array are not of the same length"
 
@@ -169,17 +157,8 @@ class OpenPackAll(torch.utils.data.Dataset):
 
             df_label_imu = optk.data.load_and_resample_operation_labels(
                     path, ts_sess_imu, classes=self.classes)
-            
-            #df_label_keypoints = optk.data.load_and_resample_operation_labels(path, ts_sess_keypoints, classes=self.classes)
-            
-            #print("IMU time", df_label_imu["annot_time"])
-            #print("Keypoints time", df_label_keypoints["annot_time"])
 
-            x_total = merged_pd.values.transpose(1,0)
-            
-
-            #print("Shape of the merged array:", x_total.shape)
-
+            x_total = merged_pd.values.transpose(1,0)  
 
             if submission:
                 # For set dummy data.
@@ -290,16 +269,13 @@ class OpenPackAll(torch.utils.data.Dataset):
         return self
 
     def __getitem__(self, index: int) -> Dict:
-        print(f"getitem {index}")
         seq_idx, seg_idx = self.index[index]["seq"], self.index[index]["seg"]
         seq_dict = self.data[seq_idx]
         seq_len = seq_dict["data"].shape[1]
 
         head = seg_idx * self.window
         tail = (seg_idx + 1) * self.window
-        #print(f'Index:{index}, seq_idx: {seq_idx}, seg_idx: {seg_idx}, seq_len {seq_len}, head: {head}, tail: {tail}')
         if tail >= seq_len:
-            #print("inside")
             pad_tail = tail - seq_len
             tail = seq_len
         else:
@@ -321,7 +297,6 @@ class OpenPackAll(torch.utils.data.Dataset):
             ts = np.pad(ts, [(0, pad_tail)],
                         mode="constant", constant_values=ts[-1])
 
-        print(f"x t shapes {x.shape} {t.shape}")
         x = torch.from_numpy(x)
         t = torch.from_numpy(t)
         ts = torch.from_numpy(ts)
@@ -390,8 +365,6 @@ class OpenPackAllSplit(torch.utils.data.Dataset):
             window (int, optional): _description_. Defaults to None.
             submission (bool, optional): _description_. Defaults to False.
         """
-        print("load dataset")
-        #data, index = [], []
         data = dict(imu=[], keypoints=[], e4=[])
         labels = dict(imu=[], keypoints=[], e4=[])
         times = dict(imu=[], keypoints=[], e4=[])
@@ -407,13 +380,9 @@ class OpenPackAllSplit(torch.utils.data.Dataset):
                     cfg.dataset.stream.path_keypoint.fname,
                 )
             ts_sess_keypoints, x_sess_keypoints = optk.data.load_keypoints(path_keypoints)
-            x_sess_keypoints = x_sess_keypoints[:(x_sess_keypoints.shape[0] - 1)]  # Remove prediction score.
-            #print("Shape of x keypoints:", x_sess_keypoints.shape)
-            #print("Shape of t keypoints:", ts_sess_keypoints.shape)
+            x_sess_keypoints = x_sess_keypoints[:(x_sess_keypoints.shape[0] - 1)]  # Remove prediction score.            
             
             x_sess_keypoints = x_sess_keypoints.transpose(2, 0, 1).reshape(34, -1)
-
-            #print("Shape of x keypoints:", x_sess_keypoints.shape)
 
             paths_imu = []
             for device in cfg.dataset.stream.devices:
@@ -430,9 +399,7 @@ class OpenPackAllSplit(torch.utils.data.Dataset):
                 paths_imu,
                 use_acc=cfg.dataset.stream.acc,
                 use_gyro=cfg.dataset.stream.gyro,
-                use_quat=cfg.dataset.stream.quat)
-            
-            #x_sess_imu = x_sess_imu.transpose(1,0)
+                use_quat=cfg.dataset.stream.quat)            
 
             paths_e4 = []
             for device in cfg.dataset.stream.devices_e4:
@@ -564,11 +531,8 @@ class OpenPackAllSplit(torch.utils.data.Dataset):
         self.labels = labels 
         self.times = times
         self.length = index
-        #print("Length: ",self.length)
-        assert len(data["keypoints"]) == len(data["imu"]) == len(data["e4"]), "every modality should have the same length"
-        #for i, kp_list in enumerate(data["keypoints"]):
-            #print(f"kp {i} : {len(kp_list)}")
-            #print(kp_list.shape)
+
+        assert len(data["keypoints"]) == len(data["imu"]) == len(data["e4"]), "every modality should have the same length"        
 
 
     
@@ -649,7 +613,6 @@ class OpenPackAllSplit(torch.utils.data.Dataset):
         return self
 
     def __getitem__(self, index: int) -> Dict:
-        #print(f"getitem {index}")
 
         x_keypoints = self.data["keypoints"][index]
         label_keypoints = self.labels["keypoints"][index]
@@ -663,7 +626,6 @@ class OpenPackAllSplit(torch.utils.data.Dataset):
         label_e4 = self.labels["e4"][index]
         times_e4 = self.times["e4"][index]
 
-        #print(f"x t shapes {x.shape} {t.shape}")
         x_keypoints = torch.from_numpy(x_keypoints)
         label_keypoints = torch.from_numpy(label_keypoints)
         times_keypoints = torch.from_numpy(times_keypoints)
@@ -676,10 +638,6 @@ class OpenPackAllSplit(torch.utils.data.Dataset):
         label_e4 = torch.from_numpy(label_e4)
         times_e4 = torch.from_numpy(times_e4)
 
-        #print(f"imu shapes {x_imu.shape} {label_imu.shape}")
-        #print(f"keypoints shapes {x_keypoints.shape} {label_keypoints.shape}")
-        #print(f"e4 shapes {x_e4.shape} {label_e4.shape}")
-        
         return {"x_keypoints": x_keypoints.squeeze(), "label_keypoints": label_keypoints.squeeze(), "times_keypoints": times_keypoints.squeeze(),"x_imu": x_imu.squeeze(), "label_imu": label_imu.squeeze(), "times_imu": times_imu.squeeze(),"x_e4": x_e4.squeeze(), "label_e4": label_e4.squeeze(), "times_e4": times_e4.squeeze()}
 
 class OpenPackSensorFusion(torch.utils.data.Dataset):   
@@ -753,13 +711,9 @@ class OpenPackSensorFusion(torch.utils.data.Dataset):
                     cfg.dataset.stream.path_keypoint.fname,
                 )
             ts_sess_keypoints, x_sess_keypoints = optk.data.load_keypoints(path_keypoints)
-            x_sess_keypoints = x_sess_keypoints[:(x_sess_keypoints.shape[0] - 1)]  # Remove prediction score.
-            #print("Shape of x keypoints:", x_sess_keypoints.shape)
-            #print("Shape of t keypoints:", ts_sess_keypoints.shape)
+            x_sess_keypoints = x_sess_keypoints[:(x_sess_keypoints.shape[0] - 1)]  # Remove prediction score.            
             
             x_sess_keypoints = x_sess_keypoints.transpose(2, 0, 1).reshape(34, -1).transpose(1,0)
-
-            #print("Shape of x keypoints:", x_sess_keypoints.shape)
 
             paths_imu = []
             for device in cfg.dataset.stream.devices:
@@ -800,21 +754,12 @@ class OpenPackSensorFusion(torch.utils.data.Dataset):
                 x_sess_e4 = np.full((6,math.ceil(1.05*x_sess_imu.shape[1])), 0.0)
                 ts_sess_e4 = np.linspace(ts_sess_imu[0], ts_sess_imu[-1], math.ceil(1.05*x_sess_imu.shape[1])).round().astype(int)
 
-            x_sess_e4 = x_sess_e4.transpose(1,0)            
-
-            #print("Shape of x imu:", x_sess_imu.shape)
-            #print("Shape of t imu:", ts_sess_imu.shape)
-
-            #print("First t imu entries", ts_sess_imu)   
-            #print("First t keypoints entries", ts_sess_keypoints)   
-
+            x_sess_e4 = x_sess_e4.transpose(1,0)   
 
             imu_pd = self.create_pd_from_data(x_sess_imu, ts_sess_imu)
             keypoints_pd = self.create_pd_from_data(x_sess_keypoints, ts_sess_keypoints)
             e4_pd = self.create_pd_from_data(x_sess_e4, ts_sess_e4)
-            merged_pd = self.merge_pds(imu_pd, keypoints_pd, e4_pd)
-            print(f"merged pd shape: {merged_pd.shape}")
-            #print(merged_pd.head())
+            merged_pd = self.merge_pds(imu_pd, keypoints_pd, e4_pd)           
 
             assert merged_pd.shape[0] == ts_sess_imu.shape[0], "DataFrame and array are not of the same length"
 
@@ -825,18 +770,9 @@ class OpenPackSensorFusion(torch.utils.data.Dataset):
                 )
 
             df_label_imu = optk.data.load_and_resample_operation_labels(
-                    path, ts_sess_imu, classes=self.classes)
-            
-            #df_label_keypoints = optk.data.load_and_resample_operation_labels(path, ts_sess_keypoints, classes=self.classes)
-            
-            #print("IMU time", df_label_imu["annot_time"])
-            #print("Keypoints time", df_label_keypoints["annot_time"])
+                    path, ts_sess_imu, classes=self.classes)   
 
-            x_total = merged_pd.values.transpose(1,0)
-            
-
-            #print("Shape of the merged array:", x_total.shape)
-
+            x_total = merged_pd.values.transpose(1,0)            
 
             if submission:
                 # For set dummy data.
@@ -863,11 +799,6 @@ class OpenPackSensorFusion(torch.utils.data.Dataset):
                       for seg_idx, pos in enumerate(range(0, seq_len, window))]
         self.data = data
         self.index = tuple(index)
-        print("index:" )
-        print (len(self.index))
-        print("data:" )
-        print(len(data))
-        #print(index)
 
     
     def load_dataset_keypoints(
@@ -947,16 +878,13 @@ class OpenPackSensorFusion(torch.utils.data.Dataset):
         return self
 
     def __getitem__(self, index: int) -> Dict:
-        #print(f"getitem {index}")
         seq_idx, seg_idx = self.index[index]["seq"], self.index[index]["seg"]
         seq_dict = self.data[seq_idx]
         seq_len = seq_dict["data"].shape[1]
 
         head = seg_idx * self.window
         tail = (seg_idx + 1) * self.window
-        #print(f'Index:{index}, seq_idx: {seq_idx}, seg_idx: {seg_idx}, seq_len {seq_len}, head: {head}, tail: {tail}')
         if tail >= seq_len:
-            #print("inside")
             pad_tail = tail - seq_len
             tail = seq_len
         else:
@@ -978,7 +906,6 @@ class OpenPackSensorFusion(torch.utils.data.Dataset):
             ts = np.pad(ts, [(0, pad_tail)],
                         mode="constant", constant_values=ts[-1])
 
-        #print(f"x t shapes {x.shape} {t.shape}")
         x = torch.from_numpy(x)
         t = torch.from_numpy(t)
         ts = torch.from_numpy(ts)
@@ -1061,9 +988,7 @@ class OpenPackSensorFusionWithKeypoints(torch.utils.data.Dataset):
                     cfg.dataset.stream.path_keypoint.fname,
                 )
             ts_sess_keypoints, x_sess_keypoints = optk.data.load_keypoints(path_keypoints)
-            x_sess_keypoints = x_sess_keypoints[:(x_sess_keypoints.shape[0] - 1)]  # Remove prediction score.
-            #print("Shape of x keypoints:", x_sess_keypoints.shape)
-            #print("Shape of t keypoints:", ts_sess_keypoints.shape)
+            x_sess_keypoints = x_sess_keypoints[:(x_sess_keypoints.shape[0] - 1)]  # Remove prediction score.            
             
             x_sess_keypoints = x_sess_keypoints.transpose(2, 0, 1).reshape(34, -1).transpose(1,0)
 
@@ -1108,21 +1033,12 @@ class OpenPackSensorFusionWithKeypoints(torch.utils.data.Dataset):
                 x_sess_e4 = np.full((6,math.ceil(1.05*x_sess_imu.shape[1])), 0.0)
                 ts_sess_e4 = np.linspace(ts_sess_imu[0], ts_sess_imu[-1], math.ceil(1.05*x_sess_imu.shape[1])).round().astype(int)
 
-            x_sess_e4 = x_sess_e4.transpose(1,0)            
-
-            #print("Shape of x imu:", x_sess_imu.shape)
-            #print("Shape of t imu:", ts_sess_imu.shape)
-
-            #print("First t imu entries", ts_sess_imu)   
-            #print("First t keypoints entries", ts_sess_keypoints)   
-
+            x_sess_e4 = x_sess_e4.transpose(1,0)   
 
             imu_pd = self.create_pd_from_data(x_sess_imu, ts_sess_imu)
             keypoints_pd = self.create_pd_from_data(x_sess_keypoints, ts_sess_keypoints)
             e4_pd = self.create_pd_from_data(x_sess_e4, ts_sess_e4)
             merged_pd = self.merge_pds(keypoints_pd, imu_pd, e4_pd)
-            print(f"merged pd shape: {merged_pd.shape}")
-            #print(merged_pd.head())
 
             assert merged_pd.shape[0] == ts_sess_keypoints.shape[0], "DataFrame and array are not of the same length"
 
@@ -1131,19 +1047,7 @@ class OpenPackSensorFusionWithKeypoints(torch.utils.data.Dataset):
                     cfg.dataset.annotation.path.dir,
                     cfg.dataset.annotation.path.fname
                 )
-
-            #df_label_keypoints = optk.data.load_and_resample_operation_labels(path, ts_sess_keypoints, classes=self.classes)
-            
-            #df_label_keypoints = optk.data.load_and_resample_operation_labels(path, ts_sess_keypoints, classes=self.classes)
-            
-            #print("IMU time", df_label_imu["annot_time"])
-            #print("Keypoints time", df_label_keypoints["annot_time"])
-
             x_total = merged_pd.values.transpose(1,0)
-            
-
-            #print("Shape of the merged array:", x_total.shape)
-
 
             if submission:
                 # For set dummy data.
@@ -1170,12 +1074,6 @@ class OpenPackSensorFusionWithKeypoints(torch.utils.data.Dataset):
                       for seg_idx, pos in enumerate(range(0, seq_len, window))]
         self.data = data
         self.index = tuple(index)
-        print("index:" )
-        print (len(self.index))
-        print("data:" )
-        print(len(data))
-        #print(index)
-
     
     def load_dataset_keypoints(
         self,
@@ -1254,16 +1152,13 @@ class OpenPackSensorFusionWithKeypoints(torch.utils.data.Dataset):
         return self
 
     def __getitem__(self, index: int) -> Dict:
-        #print(f"getitem {index}")
         seq_idx, seg_idx = self.index[index]["seq"], self.index[index]["seg"]
         seq_dict = self.data[seq_idx]
         seq_len = seq_dict["data"].shape[1]
 
         head = seg_idx * self.window
         tail = (seg_idx + 1) * self.window
-        #print(f'Index:{index}, seq_idx: {seq_idx}, seg_idx: {seg_idx}, seq_len {seq_len}, head: {head}, tail: {tail}')
         if tail >= seq_len:
-            #print("inside")
             pad_tail = tail - seq_len
             tail = seq_len
         else:
@@ -1285,7 +1180,6 @@ class OpenPackSensorFusionWithKeypoints(torch.utils.data.Dataset):
             ts = np.pad(ts, [(0, pad_tail)],
                         mode="constant", constant_values=ts[-1])
 
-        #print(f"x t shapes {x.shape} {t.shape}")
         x = torch.from_numpy(x)
         t = torch.from_numpy(t)
         ts = torch.from_numpy(ts)

@@ -1,6 +1,5 @@
-""" Implementation of DeepConvLSTM
-Reference:
-- https://www.mdpi.com/1424-8220/16/1/115
+""" Implementation of several models for the resolution of the OpenPack Challenge
+    Developed using openpack_torch/models/imu
 """
 import torch
 from torch import nn
@@ -250,9 +249,6 @@ class CSNetWithFusion(nn.Module):
        keypoints_x = self.keypoints_block(keypoints)
        e4_x = self.e4_block(e4)
 
-       #print(f"imu shape {imu_x.shape} keypoints shape {keypoints_x.shape} e4 shape {e4_x.shape} ")
-
-       #x = torch.cat([imu_x, keypoints_x, e4_x],dim=2)
        x = torch.stack([imu_x, keypoints_x, e4_x], dim=0)
        x = x.permute(1,0,2)
        x = self.out(x)
@@ -327,7 +323,6 @@ class CSNetBlock(nn.Module):
     def forward(self, x: torch.Tensor) -> torch.Tensor:
        
         x = self.conv1(x)
-        #print("x after conv shape ", x.shape)
         # Reshape: (B, CH, T) -> (T, B, CH)
         x = x.permute(2, 0, 1)
         x = self.pos(x)
@@ -341,8 +336,6 @@ class CSNetBlock(nn.Module):
         x = self.conv2(x)
         x = self.maxpool(x)
         x = self.reshape(x)        
-        #print("x after conv2", x.shape)
-        #x = self.out(x)
         return x
     
 class ConvolutionBlock(nn.Module):
@@ -364,11 +357,8 @@ class ConvolutionBlock(nn.Module):
        
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        #print("x shape", x.shape)         
         for sub_block in self.conv_sub_blocks:
-            #print("iter")
             x = sub_block(x)
-        #print("x shape", x.shape)
         x = self.max_pool(x)
         return x
 
@@ -460,9 +450,7 @@ class FusionOfIndividualModels(nn.Module):
         
         self.imu_model = imu_model
         self.keypoints_model = keypoints_model  
-        self.e4_model = e4_model 
-        #self.linear = nn.Linear(3 * 11, 11)   
-        #self.out = nn.Conv2d(in_channels=3, out_channels=num_classes, kernel_size=(11, 1), stride=(1,1), padding=(0,0),)
+        self.e4_model = e4_model         
 
         self.out = nn.Conv1d(
             33,
@@ -487,19 +475,14 @@ class FusionOfIndividualModels(nn.Module):
 
 
        upsampler_kp = nn.Upsample(size=1800, mode='linear', align_corners=False)
-       upsampled_kp = upsampler_kp(keypoints)
-       #upsampler_imu = nn.Upsample(size=1920, mode='linear', align_corners=False)
-       #upsampled_imu = upsampler_imu(imu)
+       upsampled_kp = upsampler_kp(keypoints)       
        upsampler_e4 = nn.Upsample(size=1800, mode='linear', align_corners=False)
        upsampled_e4 = upsampler_e4(e4)
 
        x = torch.stack([imu, upsampled_kp, upsampled_e4], dim=0)
-       #x = x.transpose(0, 1).reshape(1800, 3 * 11)
        x = x.permute(1,0,2,3)
        x = x.reshape(-1,33,1800)
-       print(f"x permutation shape {x.shape}")
        x = self.out(x)
-       #x = x.squeeze(2)
        print(f"x shape {x.shape}")
 
        return x
@@ -513,7 +496,7 @@ class MyDeepConvLstm(nn.Module):
 
         # -- [1] CNN --
         # *** Edit Here ***
-        num_conv_layers = 2 # convolutional layers (Default: 4)
+        num_conv_layers = 2 # convolutional layers (Default: 2)
         num_conv_filter = 64 # convolutional filters (Default: 64)
         ks = 5 # kernel size, 
         # ******************
@@ -566,9 +549,7 @@ class MyDeepConvLstm(nn.Module):
 
         # -- [2] LSTM --
         # Reshape: (B, CH, 1, T) -> (B, T, CH)
-        print(f"x 0 shape {x_branch1.shape}")
         x = torch.cat((x_branch1, x_branch2, x_branch3), dim=1)
-        print(f"x shape {x.shape}")
         x = x.permute(0,2,1)
         #x = x.squeeze(3).transpose(1, 2)
 
@@ -602,11 +583,8 @@ class ConvolutionBranch(nn.Module):
        
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        #print("x shape", x.shape)         
         for sub_block in self.conv_sub_blocks:
-            #print("iter")
             x = sub_block(x)
-        #print("x shape", x.shape)
         return x
 
 def get_conv_block_by_kernel(num_conv_layers=2, k = 1, in_ch = 12):

@@ -106,19 +106,9 @@ class SplitDataModelLM(optorch.lightning.BaseLightningModule):
         x_imu = batch["x_imu"].to(device=self.device, dtype=torch.float)
         x_keypoints = batch["x_keypoints"].to(device=self.device, dtype=torch.float)    
         x_e4 = batch["x_e4"].to(device=self.device, dtype=torch.float)            
-        t = batch["label_imu"].to(device=self.device, dtype=torch.long)
-
-        #print("Input imu size:", x_imu.shape)
-        #print("Input kp size:", x_keypoints.shape)
-        #print("Input e4 size:", x_e4.shape)
-        #print("Input labels size:", t.shape)
-        #print("Output tensor size:", y_hat.shape)
-        #print("Size of tensor after layer 1:", self.conv.weight.shape)
-        #print("Size of tensor after layer 2:", self.lstm.weight.shape)
-        #print("Size of tensor after layer 3:", self.attention.weight.shape)
+        t = batch["label_imu"].to(device=self.device, dtype=torch.long)       
 
         y_hat = self([x_imu, x_keypoints, x_e4])
-        #print("y_hat shape:", y_hat.shape)
 
         loss = self.criterion(y_hat, t)
         acc = self.calc_accuracy(y_hat, t)     
@@ -165,18 +155,8 @@ class SensorFusionModelLM(optorch.lightning.BaseLightningModule):
         print("train step")
         x = batch["x"].to(device=self.device, dtype=torch.float)        
         t = batch["t"].to(device=self.device, dtype=torch.long)
-
-        #print("Input imu size:", x_imu.shape)
-        #print("Input kp size:", x_keypoints.shape)
-        #print("Input e4 size:", x_e4.shape)
-        #print("Input labels size:", t.shape)
-        #print("Output tensor size:", y_hat.shape)
-        #print("Size of tensor after layer 1:", self.conv.weight.shape)
-        #print("Size of tensor after layer 2:", self.lstm.weight.shape)
-        #print("Size of tensor after layer 3:", self.attention.weight.shape)
-
+        
         y_hat = self(x)
-        #print("y_hat shape:", y_hat.shape)
 
         loss = self.criterion(y_hat, t)
         acc = self.calc_accuracy(y_hat, t)     
@@ -229,16 +209,7 @@ class IndividualModelForDecisionLM(optorch.lightning.BaseLightningModule):
         x_data = "x_"+self.model_type
         x = batch[x_data].to(device=self.device, dtype=torch.float)        
         label = "label_"+self.model_type                   
-        t = batch[label].to(device=self.device, dtype=torch.long)
-
-        #print("Input imu size:", x_imu.shape)
-        #print("Input kp size:", x_keypoints.shape)
-        #print("Input e4 size:", x_e4.shape)
-        #print("Input labels size:", t.shape)
-        #print("Output tensor size:", y_hat.shape)
-        #print("Size of tensor after layer 1:", self.conv.weight.shape)
-        #print("Size of tensor after layer 2:", self.lstm.weight.shape)
-        #print("Size of tensor after layer 3:", self.attention.weight.shape)
+        t = batch[label].to(device=self.device, dtype=torch.long)        
 
         y_hat = self(x)     
 
@@ -304,19 +275,9 @@ class FusionOfModelsLM(optorch.lightning.BaseLightningModule):
         x_imu = batch["x_imu"].to(device=self.device, dtype=torch.float)
         x_keypoints = batch["x_keypoints"].to(device=self.device, dtype=torch.float)    
         x_e4 = batch["x_e4"].to(device=self.device, dtype=torch.float)            
-        t = batch["label_imu"].to(device=self.device, dtype=torch.long)
-
-        #print("Input imu size:", x_imu.shape)
-        #print("Input kp size:", x_keypoints.shape)
-        #print("Input e4 size:", x_e4.shape)
-        #print("Input labels size:", t.shape)
-        #print("Output tensor size:", y_hat.shape)
-        #print("Size of tensor after layer 1:", self.conv.weight.shape)
-        #print("Size of tensor after layer 2:", self.lstm.weight.shape)
-        #print("Size of tensor after layer 3:", self.attention.weight.shape)
+        t = batch["label_imu"].to(device=self.device, dtype=torch.long)        
 
         y_hat = self([x_imu, x_keypoints, x_e4])
-        #print("y_hat shape:", y_hat.shape)
 
         loss = self.criterion(y_hat, t)
         acc = self.calc_accuracy(y_hat, t)     
@@ -337,7 +298,6 @@ class FusionOfModelsLM(optorch.lightning.BaseLightningModule):
         ts = batch["times_imu"]
 
         y_hat = self([x_imu, x_keypoints, x_e4])
-        #print("y_hat shape:", y_hat.shape)
 
         loss = self.criterion(y_hat, t)
         acc = self.calc_accuracy(y_hat, t)     
@@ -376,16 +336,7 @@ class MyDeepConvLSTMLM(optorch.lightning.BaseLightningModule):
         x_data = "x_"+self.model_type
         x = batch[x_data].to(device=self.device, dtype=torch.float)        
         label = "label_"+self.model_type                   
-        t = batch[label].to(device=self.device, dtype=torch.long)
-
-        #print("Input imu size:", x_imu.shape)
-        #print("Input kp size:", x_keypoints.shape)
-        #print("Input e4 size:", x_e4.shape)
-        #print("Input labels size:", t.shape)
-        #print("Output tensor size:", y_hat.shape)
-        #print("Size of tensor after layer 1:", self.conv.weight.shape)
-        #print("Size of tensor after layer 2:", self.lstm.weight.shape)
-        #print("Size of tensor after layer 3:", self.attention.weight.shape)
+        t = batch[label].to(device=self.device, dtype=torch.long)        
 
         y_hat = self(x)     
 
